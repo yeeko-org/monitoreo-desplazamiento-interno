@@ -1,6 +1,6 @@
-# Monitoreo de Desaparición Interna
+# Monitoreo de Desplazamiento Interna
 
-El proyecto es un scraper de noticias enfocado en la búsqueda de noticias sobre desaparición y desplazamiento.
+El proyecto es un scraper de noticias enfocado en la búsqueda de noticias sobre desplazamiento forzado interno
 
 Las consultas son muy personalizables, por lo que puede buscar cualquier tema que se pueda encontrar en Google News.
 

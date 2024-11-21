@@ -2,6 +2,23 @@ from django.db import models
 
 from pygooglenews import GoogleNews
 import requests
+from category.models import StatusControl
+
+
+class Source(models.Model):
+    name = models.CharField(max_length=100)
+    is_news = models.BooleanField(
+        default=True, verbose_name='Es una fuente de noticias')
+    main_url = models.CharField(max_length=100, blank=True, null=True)
+    order = models.SmallIntegerField(default=5)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Fuente de información'
+        verbose_name_plural = 'Fuentes de información'
 
 
 class SearchQuery(models.Model):
@@ -16,8 +33,8 @@ class SearchQuery(models.Model):
 
         _save = super().save(*args, **kwargs)
         gn = GoogleNews("es", "MX")
-        news = gn.search(self.query, helper=True, when=self.when)
-        entries = news['entries']
+        notes = gn.search(self.query, helper=True, when=self.when)
+        entries = notes['entries']
         for entry in entries:
             source = entry.get("source", {}).get("href")
 
@@ -63,7 +80,7 @@ class SourceMethod(models.Model):
     def __str__(self):
         return self.domain
 
-    def news_by_link(self, link: Link):
+    def notes_by_link(self, link: Link):
         from bs4 import BeautifulSoup
         link_content = link.get_content()
         if not link_content:
@@ -89,7 +106,7 @@ class SourceMethod(models.Model):
         subtitle = get_text(self.subtitle_tag, soup)
         content = get_text(self.content_tag, soup)
 
-        news = News.objects.create(
+        notes = Note.objects.create(
             link=link,
             title=title,
             subtitle=subtitle,
@@ -98,15 +115,50 @@ class SourceMethod(models.Model):
         )
 
 
-class News(models.Model):
+class Note(models.Model):
+    source = models.ForeignKey(
+        Source, on_delete=models.CASCADE,
+        verbose_name='Fuente de información')
     link = models.ForeignKey(
-        Link, on_delete=models.CASCADE, related_name='news')
+        Link, on_delete=models.CASCADE, related_name='notes')
     source_method = models.ForeignKey(
-        SourceMethod, on_delete=models.CASCADE, related_name='news',
+        SourceMethod, on_delete=models.CASCADE, related_name='notes',
         null=True, blank=True)
+    author = models.CharField(max_length=255, blank=True, null=True)
+    section = models.CharField(max_length=120, blank=True, null=True)
+    pages = models.CharField(max_length=80, blank=True, null=True)
     title = models.CharField(max_length=200)
     subtitle = models.CharField(max_length=200)
     content = models.TextField()
+    structured_content = models.JSONField(blank=True, null=True)
+    status_register = models.ForeignKey(
+        StatusControl, on_delete=models.CASCADE, blank=True, null=True)
+    comments = models.TextField(blank=True, null=True)
+
+    files: models.QuerySet["NoteFile"]
+    status_register_id = str | None
 
     def __str__(self):
         return self.title
+
+    class Meta:
+        verbose_name = 'Nota'
+        verbose_name_plural = 'Notas'
+
+
+def upload_to_note_file(instance, filename):
+    return f'note_file/{instance.note.pk}/{filename}'
+
+
+class NoteFile(models.Model):
+    note = models.ForeignKey(
+        Note, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to=upload_to_note_file, max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.file.name if self.file else 'Archivo sin nombre'
+
+    class Meta:
+        verbose_name = 'Archivo de nota'
+        verbose_name_plural = 'Archivos de nota'
