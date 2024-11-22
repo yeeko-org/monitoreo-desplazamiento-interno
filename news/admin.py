@@ -6,17 +6,9 @@ from django.urls import path
 from .models import Link, Note, SearchQuery, SourceMethod
 
 
-class LinkInline(admin.StackedInline):
-    show_change_link = True
-    model = Link
-    extra = 0
-    fields = ('gnews_url', 'real_url', 'title', 'source')
-
-
 @admin.register(SearchQuery)
 class SearchQueryAdmin(admin.ModelAdmin):
     list_display = ('query', 'created_at')
-    inlines = [LinkInline]
 
 
 def apply_selected_method(modeladmin, request, queryset):
@@ -84,7 +76,7 @@ class LinkAdmin(admin.ModelAdmin):
 
 @admin.register(SourceMethod)
 class SourceMethodAdmin(admin.ModelAdmin):
-    list_display = ('domain', 'title_tag', 'subtitle_tag', 'content_tag')
+    list_display = ('name', 'title_tag', 'subtitle_tag', 'content_tag')
 
 
 @admin.register(Note)

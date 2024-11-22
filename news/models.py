@@ -1,8 +1,10 @@
-from django.db import models
-
-from pygooglenews import GoogleNews
 import requests
+
+from django.db import models
+from pygooglenews import GoogleNews
+
 from category.models import StatusControl
+from utils.date_time import parse_gmt_date_list
 
 
 class Source(models.Model):
@@ -23,7 +25,11 @@ class Source(models.Model):
 
 class SearchQuery(models.Model):
     query = models.TextField()
-    when = models.CharField(max_length=10, default='1d')
+    when = models.CharField(
+        max_length=10, help_text='1d', blank=True, null=True
+    )
+    from_date = models.DateField(blank=True, null=True)
+    to_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -32,31 +38,57 @@ class SearchQuery(models.Model):
     def save(self, *args, **kwargs):
 
         _save = super().save(*args, **kwargs)
+        search_kwargs = {}
+        if self.from_date and self.to_date:
+            search_kwargs["from_"] = self.from_date.strftime("%Y-%m-%d")
+            search_kwargs["to_"] = self.to_date.strftime("%Y-%m-%d")
+        else:
+            search_kwargs = {"when": self.when or "1d"}
         gn = GoogleNews("es", "MX")
-        notes = gn.search(self.query, helper=True, when=self.when)
+        notes = gn.search(self.query, helper=True, **search_kwargs)
         entries = notes['entries']
-        for entry in entries:
-            source = entry.get("source", {}).get("href")
+        sources = {}
 
-            link = Link.objects.create(
-                query=self,
-                gnews_url=entry.get("link"),
+        for entry in entries:
+            self.save_entry(entry, sources)
+        return _save
+
+    def save_entry(self, entry: dict, sources: dict):
+        source_name = entry.get("source", {}).get("title")
+        if source_name not in sources:
+            source_url = entry.get("source", {}).get("href")
+            source, _ = Source.objects.get_or_create(
+                name=source_name,
+                defaults={"main_url": source_url}
+            )
+            sources[source_name] = source
+        else:
+            source = sources[source_name]
+
+        link, _ = Link.objects.get_or_create(
+            gnews_url=entry.get("link"),
+            defaults=dict(
                 title=entry.get("title"),
                 description=entry.get("summary"),
-                source=source
+                source=source,
+                published_at=parse_gmt_date_list(
+                    entry.get("published_parsed"))
             )
-            link.save()
-        return _save
+        )
+        link.querys.add(self)
 
 
 class Link(models.Model):
-    query = models.ForeignKey(
-        SearchQuery, on_delete=models.CASCADE, related_name='links')
     gnews_url = models.URLField(max_length=800)
     real_url = models.URLField(blank=True, null=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
-    source = models.CharField(max_length=200, blank=True, null=True)
+    source = models.ForeignKey(
+        Source, on_delete=models.CASCADE, related_name='links')
+    published_at = models.DateTimeField(blank=True, null=True)
+    querys = models.ManyToManyField(
+        SearchQuery, related_name='links', blank=True)
+    valid = models.BooleanField(blank=True, null=True)
 
     def __str__(self):
         return self.gnews_url[:30]
@@ -72,10 +104,19 @@ class Link(models.Model):
 
 
 class SourceMethod(models.Model):
-    domain = models.CharField(max_length=200)
+
+    name = models.CharField(max_length=200)
+
     title_tag = models.CharField(max_length=200)
     subtitle_tag = models.CharField(max_length=200)
     content_tag = models.TextField()
+
+    validated = models.BooleanField(default=False)
+    sources = models.ManyToManyField(
+        Source, related_name='methods', blank=True)
+
+    def _valid_source(self, source: Source):
+        return self.sources.filter(pk=source.pk).exists()
 
     def __str__(self):
         return self.domain
