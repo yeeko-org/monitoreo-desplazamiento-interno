@@ -99,7 +99,7 @@ class SearchQuery(models.Model):
     def __str__(self):
         return self.name
 
-    def save(self, *args, do_search=False, do_words=True, **kwargs):
+    def save(self, *args, do_search=False, do_words=False, **kwargs):
 
         if (
                 not self.query and do_words and self.automatic_query
