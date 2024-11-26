@@ -1,14 +1,52 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.urls import path
 
-from .models import Link, Note, SearchQuery, SourceMethod
+from .models import (
+    Link, Note, SearchQuery, SourceMethod, MainGroup, ComplementaryGroup, NegativeGroup,
+    Source)
+
+
+@admin.register(Source)
+class SourceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_news', 'main_url', 'order')
+    list_editable = ('order',)
+
+
+@admin.register(MainGroup)
+class MainGroupAdmin(admin.ModelAdmin):
+    list_display = ('main_word',)
+
+
+@admin.register(ComplementaryGroup)
+class ComplementaryGroupAdmin(admin.ModelAdmin):
+    list_display = ('main_word',)
+
+
+@admin.register(NegativeGroup)
+class NegativeGroupAdmin(admin.ModelAdmin):
+    lWordGroupCAdminist_display = ('main_word',)
 
 
 @admin.register(SearchQuery)
 class SearchQueryAdmin(admin.ModelAdmin):
     list_display = ('query', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('query',)
+    filter_horizontal = ('main_words', 'complementary_words', 'negative_words')
+
+    def save_model(self, request, obj, form, change):
+        obj.save(do_words=False)
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        obj = form.instance
+        obj.save(do_words=True)
+        results = obj.search_and_save()
+        messages.success(
+            request, f"Se encontraron {results['total']} "
+            f"resultados, se crearon {results['created']} links")
 
 
 def apply_selected_method(modeladmin, request, queryset):

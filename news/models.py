@@ -23,8 +23,69 @@ class Source(models.Model):
         verbose_name_plural = 'Fuentes de información'
 
 
+class ListWords(models.Model):
+    main_word = models.CharField(max_length=100, unique=True)
+    alternative_words = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        if not self.alternative_words:
+            return self.main_word
+
+        alternative_list = self.alternative_words.split(",")
+        alt_words = ", ".join(alternative_list[:2])
+        if len(alternative_list) > 2:
+            alt_words = alt_words + ", ..."
+        return f"{self.main_word} ({alt_words})"
+
+    def get_all_words(self):
+        if not self.alternative_words:
+            words = [self.main_word]
+        else:
+            words = [self.main_word] + self.alternative_words.split(",")
+
+        standard_words = [word.strip() for word in words]
+        return [
+            f'"{word}"' if " " in word else word
+            for word in standard_words
+        ]
+
+    def get_or_query(self):
+        return " OR ".join(self.get_all_words())
+
+    def get_negative_query(self):
+        return " ".join([f"-{word}" for word in self.get_all_words()])
+
+
+class MainGroup(ListWords):
+    pass
+
+
+class ComplementaryGroup(ListWords):
+    pass
+
+
+class NegativeGroup(ListWords):
+    pass
+
+
+def words_query_union(words_query, union="OR"):
+    if not union:
+        union = " "
+    else:
+        union = f" {union} "
+    return union.join(
+        [list_words.get_or_query() for list_words in words_query])
+
+
 class SearchQuery(models.Model):
-    query = models.TextField()
+    name = models.CharField(max_length=100)
+    query = models.TextField(blank=True, null=True)
+    main_words = models.ManyToManyField(
+        MainGroup, related_name='queries', blank=True)
+    complementary_words = models.ManyToManyField(
+        ComplementaryGroup, related_name='queries', blank=True)
+    negative_words = models.ManyToManyField(
+        NegativeGroup, related_name='queries', blank=True)
     when = models.CharField(
         max_length=10, help_text='1d', blank=True, null=True
     )
@@ -32,12 +93,54 @@ class SearchQuery(models.Model):
     to_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.query
+    manual_query = models.BooleanField(default=False)
+    automatic_query = models.BooleanField(default=False)
 
-    def save(self, *args, **kwargs):
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, do_search=False, do_words=True, **kwargs):
+
+        if (
+                not self.query and do_words and self.automatic_query
+                and not self.manual_query
+        ):
+            self.query_words()
 
         _save = super().save(*args, **kwargs)
+
+        if do_search:
+            self.search()
+
+        return _save
+
+    def query_words(self):
+        main_query = words_query_union(self.main_words.all())
+        if not main_query:
+            return
+
+        complementary_query = words_query_union(self.complementary_words.all())
+        negative_terms = words_query_union(self.negative_words.all(), union="")
+
+        if complementary_query or negative_terms:
+            self.query = f"({main_query})"
+        else:
+            self.query = main_query
+            return
+
+        if complementary_query:
+            self.query += f" AND ({complementary_query})"
+
+        if negative_terms:
+            self.query += f" {negative_terms}"
+
+    def search(self):
+        if not self.query and not self.manual_query and self.automatic_query:
+            self.query_words()
+
+        if not self.query:
+            raise ValueError("Query is empty")
+
         search_kwargs = {}
         if self.from_date and self.to_date:
             search_kwargs["from_"] = self.from_date.strftime("%Y-%m-%d")
@@ -46,12 +149,22 @@ class SearchQuery(models.Model):
             search_kwargs = {"when": self.when or "1d"}
         gn = GoogleNews("es", "MX")
         notes = gn.search(self.query, helper=True, **search_kwargs)
-        entries = notes['entries']
-        sources = {}
+        return notes.get("entries", [])
 
+    def search_and_save(self):
+        entries = self.search()
+
+        sources = {}
+        created_count = 0
         for entry in entries:
-            self.save_entry(entry, sources)
-        return _save
+            link, is_created = self.save_entry(entry, sources)
+            if is_created:
+                created_count += 1
+
+        return {
+            "created": created_count,
+            "total": len(entries)
+        }
 
     def save_entry(self, entry: dict, sources: dict):
         source_name = entry.get("source", {}).get("title")
@@ -65,7 +178,7 @@ class SearchQuery(models.Model):
         else:
             source = sources[source_name]
 
-        link, _ = Link.objects.get_or_create(
+        link, is_created = Link.objects.get_or_create(
             gnews_url=entry.get("link"),
             defaults=dict(
                 title=entry.get("title"),
@@ -76,6 +189,7 @@ class SearchQuery(models.Model):
             )
         )
         link.querys.add(self)
+        return link, is_created
 
 
 class Link(models.Model):
