@@ -68,13 +68,13 @@ class NegativeGroup(ListWords):
     pass
 
 
-def words_query_union(words_query, union="OR"):
+def words_query_union(words_query, union="OR", funtion="get_or_query"):
     if not union:
         union = " "
     else:
         union = f" {union} "
     return union.join(
-        [list_words.get_or_query() for list_words in words_query])
+        [getattr(list_words, funtion)() for list_words in words_query])
 
 
 class SearchQuery(models.Model):
@@ -101,10 +101,7 @@ class SearchQuery(models.Model):
 
     def save(self, *args, do_search=False, do_words=False, **kwargs):
 
-        if (
-                not self.query and do_words and self.automatic_query
-                and not self.manual_query
-        ):
+        if do_words and self.automatic_query and not self.manual_query:
             self.query_words()
 
         _save = super().save(*args, **kwargs)
@@ -120,7 +117,9 @@ class SearchQuery(models.Model):
             return
 
         complementary_query = words_query_union(self.complementary_words.all())
-        negative_terms = words_query_union(self.negative_words.all(), union="")
+        negative_terms = words_query_union(
+            self.negative_words.all(), union="",
+            funtion="get_negative_query")
 
         if complementary_query or negative_terms:
             self.query = f"({main_query})"
@@ -193,7 +192,7 @@ class SearchQuery(models.Model):
 
 
 class Link(models.Model):
-    gnews_url = models.URLField(max_length=800)
+    gnews_url = models.URLField(max_length=800, unique=True)
     real_url = models.URLField(blank=True, null=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -233,7 +232,7 @@ class SourceMethod(models.Model):
         return self.sources.filter(pk=source.pk).exists()
 
     def __str__(self):
-        return self.domain
+        return self.name
 
     def notes_by_link(self, link: Link):
         from bs4 import BeautifulSoup
