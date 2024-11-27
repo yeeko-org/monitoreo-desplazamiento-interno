@@ -28,9 +28,11 @@ class SearchQueryViewSet(ModelViewSet):
             note_serializer = NoteAndLinkSerializer(notes, many=True)
             entries['notes'] = note_serializer.data
             entries["link_id"] = link_obj.pk
+            entries["link_valid"] = link_obj.valid
             exist_links_count += 1
         search_count = len(search_entries)
         return Response({
             'search_count': search_count,
-            'search_entitys': search_entries
+            'exist_links_count': exist_links_count,
+            'search_entitys': search_entries,
         })

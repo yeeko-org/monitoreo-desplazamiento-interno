@@ -234,7 +234,7 @@ class SourceMethod(models.Model):
     def __str__(self):
         return self.name
 
-    def notes_by_link(self, link: Link):
+    def note_by_link(self, link: Link):
         from bs4 import BeautifulSoup
         link_content = link.get_content()
         if not link_content:
@@ -260,12 +260,13 @@ class SourceMethod(models.Model):
         subtitle = get_text(self.subtitle_tag, soup)
         content = get_text(self.content_tag, soup)
 
-        notes = Note.objects.create(
+        return Note.objects.create(
             link=link,
             title=title,
             subtitle=subtitle,
             content=content,
-            source_method=self
+            source_method=self,
+            source=link.source
         )
 
 
