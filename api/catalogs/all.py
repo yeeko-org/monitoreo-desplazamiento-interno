@@ -12,9 +12,12 @@ from api.catalogs.serializers import (
     CollectionLinkSerializer,
     FilterGroupSerializer,
 )
+from news.models import Source
+from api.geo.serializers import StateListSerializer
+from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
 
 from geo.models import State
-from work_flux.models import StatusControl
+from category.models import StatusControl
 
 
 class CatalogsView(APIView):
@@ -33,8 +36,8 @@ class CatalogsView(APIView):
             # "involved_roles": InvolvedRoleSerializer(
             #     InvolvedRole.objects.all(), many=True).data,
 
-            # "sources": SourceSerializer(
-            #     Source.objects.all(), many=True).data,
+            "sources": SourceSerializer(
+                Source.objects.all(), many=True).data,
             "status_control": StatusControlSerializer(
                 StatusControl.objects.all(), many=True).data,
             "states": StateListSerializer(

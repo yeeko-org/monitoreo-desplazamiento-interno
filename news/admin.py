@@ -4,14 +4,19 @@ from django.shortcuts import render, redirect
 from django.urls import path
 
 from .models import (
-    Link, Note, SearchQuery, SourceMethod, MainGroup, ComplementaryGroup, NegativeGroup,
-    Source)
+    Link, Note, SearchQuery, SourceMethod, Source,
+    MainGroup, ComplementaryGroup, NegativeGroup, ListWords)
 
 
 @admin.register(Source)
 class SourceAdmin(admin.ModelAdmin):
     list_display = ('name', 'is_news', 'main_url', 'order')
     list_editable = ('order',)
+
+
+@admin.register(ListWords)
+class ListWordsAdmin(admin.ModelAdmin):
+    list_display = ('main_word', 'cluster')
 
 
 @admin.register(MainGroup)
@@ -26,7 +31,7 @@ class ComplementaryGroupAdmin(admin.ModelAdmin):
 
 @admin.register(NegativeGroup)
 class NegativeGroupAdmin(admin.ModelAdmin):
-    lWordGroupCAdminist_display = ('main_word',)
+    list_display = ('main_word',)
 
 
 @admin.register(SearchQuery)
@@ -34,7 +39,8 @@ class SearchQueryAdmin(admin.ModelAdmin):
     list_display = ('query', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('query',)
-    filter_horizontal = ('main_words', 'complementary_words', 'negative_words')
+    filter_horizontal = (
+        'list_words', 'main_words', 'complementary_words', 'negative_words')
 
     def save_model(self, request, obj, form, change):
         obj.save(do_words=False)

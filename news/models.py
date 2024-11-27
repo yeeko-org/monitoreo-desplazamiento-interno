@@ -23,9 +23,28 @@ class Source(models.Model):
         verbose_name_plural = 'Fuentes de información'
 
 
+class Cluster(models.Model):
+    name = models.CharField(max_length=60, primary_key=True)
+    public_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    order = models.SmallIntegerField(default=5)
+
+    def __str__(self):
+        return self.public_name
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Cluster'
+        verbose_name_plural = 'Clusters'
+
+
 class ListWords(models.Model):
+    cluster = models.ForeignKey(
+        Cluster, on_delete=models.CASCADE, related_name='words',
+        blank=True, null=True)
     main_word = models.CharField(max_length=100, unique=True)
     alternative_words = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
 
     def __str__(self):
         if not self.alternative_words:
@@ -82,10 +101,16 @@ class SearchQuery(models.Model):
     query = models.TextField(blank=True, null=True)
     main_words = models.ManyToManyField(
         MainGroup, related_name='queries', blank=True)
+    main_words2 = models.ManyToManyField(
+        ListWords, related_name='main_queries', blank=True)
     complementary_words = models.ManyToManyField(
         ComplementaryGroup, related_name='queries', blank=True)
+    complementary_words2 = models.ManyToManyField(
+        ListWords, related_name='complementary_queries', blank=True)
     negative_words = models.ManyToManyField(
         NegativeGroup, related_name='queries', blank=True)
+    negative_words2 = models.ManyToManyField(
+        ListWords, related_name='negative_queries', blank=True)
     when = models.CharField(
         max_length=10, help_text='1d', blank=True, null=True
     )
@@ -119,6 +144,29 @@ class SearchQuery(models.Model):
         complementary_query = words_query_union(self.complementary_words.all())
         negative_terms = words_query_union(
             self.negative_words.all(), union="",
+            funtion="get_negative_query")
+
+        if complementary_query or negative_terms:
+            self.query = f"({main_query})"
+        else:
+            self.query = main_query
+            return
+
+        if complementary_query:
+            self.query += f" AND ({complementary_query})"
+
+        if negative_terms:
+            self.query += f" {negative_terms}"
+
+    def query_words2(self):
+        main_query = words_query_union(self.main_words2.all())
+        if not main_query:
+            return
+
+        complementary_query = words_query_union(
+            self.complementary_words2.all())
+        negative_terms = words_query_union(
+            self.negative_words2.all(), union="",
             funtion="get_negative_query")
 
         if complementary_query or negative_terms:

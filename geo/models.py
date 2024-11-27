@@ -1,5 +1,5 @@
 from django.db import models
-from work_flux.models import StatusControl
+from category.models import StatusControl
 # from project.models import Project
 # from event.models import Event
 

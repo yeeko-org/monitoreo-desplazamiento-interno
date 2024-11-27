@@ -24,8 +24,21 @@ Seleccionando un grupo de Links, se puede usar uno de los SourceMethod que se co
 SourceMethod genera los registros News a partir de los Links seleccionados.
 ![image](https://github.com/yeeko-org/monitoreo-de-desaparicion-interna/assets/2782352/1976f99e-0d19-46dd-8a4b-17c746d0274d)
 
-# Instalacion
 
-La instalacion de la libreria pygooglenews puede causar problemas, se recomienda instalar individualmente sin dependencias:
+# Instalación
+
+La instalación de la libreria pygooglenews puede causar problemas, se recomienda instalar individualmente sin dependencias:
 
     pip install pygooglenews --no-deps
+
+
+### Orden de ejecución de migración de datos:
+
+python .\manage.py  migrate
+python .\manage.py  runserver
+
+python .\manage.py  migrate_ps_schemas
+
+python .\manage.py  load_states_data
+python .\manage.py  load_municipios
+python .\manage.py  load_localidades

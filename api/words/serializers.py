@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
-from news.models import MainGroup, ComplementaryGroup, NegativeGroup
+from news.models import (
+    MainGroup, ComplementaryGroup, NegativeGroup, ListWords)
+
+
+class ListWordsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ListWords
+        fields = '__all__'
 
 
 class MainGroupSerializer(serializers.ModelSerializer):

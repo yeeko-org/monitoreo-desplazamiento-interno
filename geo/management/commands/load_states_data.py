@@ -1,4 +1,4 @@
-from actor.migrate.common import text_normalizer
+from geo.migrate.common import text_normalizer
 from geo.models import State
 from geo.states_data import states
 

@@ -2,7 +2,7 @@ import csv
 import traceback
 from django.core.management.base import BaseCommand
 
-from actor.migrate.common import text_normalizer
+from geo.migrate.common import text_normalizer
 from geo.models import Municipality
 
 
