@@ -99,6 +99,7 @@ def words_query_union(words_query, union="OR", funtion="get_or_query"):
 class SearchQuery(models.Model):
     name = models.CharField(max_length=100)
     query = models.TextField(blank=True, null=True)
+    manual_query = models.TextField(blank=True, null=True)
     main_words = models.ManyToManyField(
         MainGroup, related_name='queries', blank=True)
     main_words2 = models.ManyToManyField(
@@ -118,15 +119,14 @@ class SearchQuery(models.Model):
     to_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    manual_query = models.BooleanField(default=False)
-    automatic_query = models.BooleanField(default=False)
+    use_automatic_query = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
 
     def save(self, *args, do_search=False, do_words=False, **kwargs):
 
-        if do_words and self.automatic_query and not self.manual_query:
+        if do_words and self.use_automatic_query:
             self.query_words()
 
         _save = super().save(*args, **kwargs)
@@ -182,7 +182,7 @@ class SearchQuery(models.Model):
             self.query += f" {negative_terms}"
 
     def search(self):
-        if not self.query and not self.manual_query and self.automatic_query:
+        if not self.query and self.use_automatic_query:
             self.query_words()
 
         if not self.query:
@@ -282,7 +282,7 @@ class SourceMethod(models.Model):
     def __str__(self):
         return self.name
 
-    def notes_by_link(self, link: Link):
+    def note_by_link(self, link: Link):
         from bs4 import BeautifulSoup
         link_content = link.get_content()
         if not link_content:
@@ -308,12 +308,13 @@ class SourceMethod(models.Model):
         subtitle = get_text(self.subtitle_tag, soup)
         content = get_text(self.content_tag, soup)
 
-        notes = Note.objects.create(
+        return Note.objects.create(
             link=link,
             title=title,
             subtitle=subtitle,
             content=content,
-            source_method=self
+            source_method=self,
+            source=link.source
         )
 
 

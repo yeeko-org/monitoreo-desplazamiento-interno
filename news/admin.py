@@ -40,7 +40,7 @@ class SearchQueryAdmin(admin.ModelAdmin):
     list_filter = ('created_at',)
     search_fields = ('query',)
     filter_horizontal = (
-        'list_words', 'main_words', 'complementary_words', 'negative_words')
+        'main_words', 'complementary_words', 'negative_words')
 
     def save_model(self, request, obj, form, change):
         obj.save(do_words=False)
@@ -61,7 +61,7 @@ def apply_selected_method(modeladmin, request, queryset):
         selected_method = SourceMethod.objects.get(id=selected_method_id)
 
         for link in queryset:
-            selected_method.notes_by_link(link)
+            selected_method.note_by_link(link)
             print(f'Aplicando {selected_method} a {link}')
 
         modeladmin.message_user(request, "Método aplicado exitosamente")
