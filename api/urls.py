@@ -11,5 +11,6 @@ router.register('main_group', MainGroupViewSet)
 router.register('complementary_group', ComplementaryGroupViewSet)
 router.register('negative_group', NegativeGroupViewSet)
 urlpatterns = [
+    path('catalogs/', include('api.views.catalogs.urls')),
     path('', include(router.urls)),
 ]
