@@ -119,7 +119,10 @@ class SearchQuery(models.Model):
     to_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    use_automatic_query = models.BooleanField(default=True)
+    use_manual_query = models.BooleanField(default=True)
+    status_register = models.ForeignKey(
+        StatusControl, on_delete=models.CASCADE, blank=True, null=True)
+    comments = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -167,6 +170,12 @@ class SearchQuery(models.Model):
         if not self.query:
             raise ValueError("Query is empty")
 
+        if self.use_manual_query and not self.manual_query:
+            raise ValueError("Manual query is empty")
+
+        final_query = self.manual_query \
+            if self.use_manual_query else self.query
+
         search_kwargs = {}
         if self.from_date and self.to_date:
             search_kwargs["from_"] = self.from_date.strftime("%Y-%m-%d")
@@ -174,7 +183,7 @@ class SearchQuery(models.Model):
         else:
             search_kwargs = {"when": self.when or "1d"}
         gn = GoogleNews("es", "MX")
-        notes = gn.search(self.query, helper=True, **search_kwargs)
+        notes = gn.search(final_query, helper=True, **search_kwargs)
         return notes.get("entries", [])
 
     def search_and_save(self):

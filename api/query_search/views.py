@@ -15,6 +15,7 @@ class SearchQueryViewSet(ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def search(self, request, pk=None):
+        search_query: SearchQuery
         search_query = self.get_object()
         search_entries = search_query.search()
         exist_links_count = 0
