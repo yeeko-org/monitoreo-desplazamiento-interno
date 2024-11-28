@@ -24,13 +24,13 @@ class Source(models.Model):
 
 
 class Cluster(models.Model):
-    name = models.CharField(max_length=60, primary_key=True)
-    public_name = models.CharField(max_length=255)
+    key_name = models.CharField(max_length=60, primary_key=True)
+    name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     order = models.SmallIntegerField(default=5)
 
     def __str__(self):
-        return self.public_name
+        return self.name
 
     class Meta:
         ordering = ['order']
@@ -38,7 +38,7 @@ class Cluster(models.Model):
         verbose_name_plural = 'Clusters'
 
 
-class ListWords(models.Model):
+class WordList(models.Model):
     cluster = models.ForeignKey(
         Cluster, on_delete=models.CASCADE, related_name='words',
         blank=True, null=True)
@@ -75,15 +75,15 @@ class ListWords(models.Model):
         return " ".join([f"-{word}" for word in self.get_all_words()])
 
 
-class MainGroup(ListWords):
+class MainGroup(WordList):
     pass
 
 
-class ComplementaryGroup(ListWords):
+class ComplementaryGroup(WordList):
     pass
 
 
-class NegativeGroup(ListWords):
+class NegativeGroup(WordList):
     pass
 
 
@@ -93,7 +93,7 @@ def words_query_union(words_query, union="OR", funtion="get_or_query"):
     else:
         union = f" {union} "
     return union.join(
-        [getattr(list_words, funtion)() for list_words in words_query])
+        [getattr(word_list, funtion)() for word_list in words_query])
 
 
 class SearchQuery(models.Model):
@@ -103,15 +103,15 @@ class SearchQuery(models.Model):
     main_words = models.ManyToManyField(
         MainGroup, related_name='queries', blank=True)
     main_words2 = models.ManyToManyField(
-        ListWords, related_name='main_queries', blank=True)
+        WordList, related_name='main_queries', blank=True)
     complementary_words = models.ManyToManyField(
         ComplementaryGroup, related_name='queries', blank=True)
     complementary_words2 = models.ManyToManyField(
-        ListWords, related_name='complementary_queries', blank=True)
+        WordList, related_name='complementary_queries', blank=True)
     negative_words = models.ManyToManyField(
         NegativeGroup, related_name='queries', blank=True)
     negative_words2 = models.ManyToManyField(
-        ListWords, related_name='negative_queries', blank=True)
+        WordList, related_name='negative_queries', blank=True)
     when = models.CharField(
         max_length=10, help_text='1d', blank=True, null=True
     )
@@ -127,7 +127,8 @@ class SearchQuery(models.Model):
     def save(self, *args, do_search=False, do_words=False, **kwargs):
 
         if do_words and self.use_automatic_query:
-            self.query_words()
+            # self.query_words()
+            self.query_words2()
 
         _save = super().save(*args, **kwargs)
 
@@ -183,7 +184,8 @@ class SearchQuery(models.Model):
 
     def search(self):
         if not self.query and self.use_automatic_query:
-            self.query_words()
+            # self.query_words()
+            self.query_words2()
 
         if not self.query:
             raise ValueError("Query is empty")

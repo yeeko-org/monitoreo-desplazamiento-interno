@@ -10,8 +10,6 @@ class InitClusters:
             ('negative', 'Negativos'),
         ]
 
-        for name, public_name in init_clusters:
+        for key_name, name in init_clusters:
             Cluster.objects.get_or_create(
-                name=name,
-                public_name=public_name
-            )
+                key_name=key_name, name=name)

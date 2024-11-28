@@ -5,7 +5,7 @@ from django.urls import path
 
 from .models import (
     Link, Note, SearchQuery, SourceMethod, Source,
-    MainGroup, ComplementaryGroup, NegativeGroup, ListWords)
+    MainGroup, ComplementaryGroup, NegativeGroup, WordList)
 
 
 @admin.register(Source)
@@ -14,8 +14,8 @@ class SourceAdmin(admin.ModelAdmin):
     list_editable = ('order',)
 
 
-@admin.register(ListWords)
-class ListWordsAdmin(admin.ModelAdmin):
+@admin.register(WordList)
+class WordListAdmin(admin.ModelAdmin):
     list_display = ('main_word', 'cluster')
 
 

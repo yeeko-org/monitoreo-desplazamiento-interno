@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
-from news.models import Source
+from news.models import Source, Cluster
 from category.models import StatusControl
 
-from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
+from ps_schema.models import (Level, Collection, CollectionLink, FilterGroup)
 
 
 class StatusControlSerializer(serializers.ModelSerializer):
@@ -15,6 +15,12 @@ class StatusControlSerializer(serializers.ModelSerializer):
 class SourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Source
+        fields = "__all__"
+
+
+class ClusterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cluster
         fields = "__all__"
 
 

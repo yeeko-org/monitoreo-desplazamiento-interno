@@ -2,17 +2,20 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
+from api.words.serializers import WordListSerializer
+from api.query_search.serializers import SearchQuerySerializer
 
 
 from api.catalogs.serializers import (
     SourceSerializer,
+    ClusterSerializer,
     StatusControlSerializer,
     LevelSerializer,
     CollectionSerializer,
     CollectionLinkSerializer,
     FilterGroupSerializer,
 )
-from news.models import Source
+from news.models import Source, Cluster, SearchQuery, WordList
 from api.geo.serializers import StateListSerializer
 from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
 
@@ -38,6 +41,14 @@ class CatalogsView(APIView):
 
             "sources": SourceSerializer(
                 Source.objects.all(), many=True).data,
+            "clusters": ClusterSerializer(
+                Cluster.objects.all(), many=True).data,
+
+            "word_lists": WordListSerializer(
+                WordList.objects.all(), many=True).data,
+            "search_queries": SearchQuerySerializer(
+                SearchQuery.objects.all(), many=True).data,
+
             "status_control": StatusControlSerializer(
                 StatusControl.objects.all(), many=True).data,
             "states": StateListSerializer(

@@ -20,6 +20,30 @@ all_collections = {
             "model_name": "Source",
             "level": "category_subtype",
         },
+        {
+            "snake_name": "cluster",
+            "name": "Cluster",
+            "plural_name": "Clusters",
+            "model_name": "Cluster",
+            "level": "category_type",
+        },
+        {
+            "snake_name": "word_list",
+            "name": "Lista de palabras",
+            "plural_name": "Listas de palabras",
+            "model_name": "WordList",
+            "level": "category_subtype",
+        },
+        {
+            "snake_name": "search_query",
+            "name": "Búsqueda de palabras",
+            "plural_name": "Búsquedas de palabras",
+            "model_name": "SearchQuery",
+            "level": "primary",
+            "status_groups": ["register"],
+            "color": 'blue',
+            "icon": 'search',
+        },
     ],
     "geo": [
         {
@@ -56,7 +80,7 @@ all_collections = {
 
 filter_groups = [
     {
-        "key_name": "source_types",
+        "key_name": "sources",
         "name": "Fuente de información",
         "plural_name": "Fuentes de información",
         "main_collection": "news-note",
@@ -64,6 +88,18 @@ filter_groups = [
             "news-note",
         ],
         "category_subtype": "news-source",
+    },
+    {
+        "key_name": "word_lists",
+        "name": "Lista de palabras",
+        "plural_name": "Listas de palabras",
+        "main_collection": "news-search_query",
+        "filter_collections": [
+            "news-word_list",
+        ],
+        "category_type": "news-cluster",
+        "category_subtype": "news-word_list",
+        # "category_subtype": "news-cluster",
     },
     {
         "key_name": "states",
@@ -107,6 +143,19 @@ collection_links = [
     #     "is_multiple": True,
     #     "is_mandatory": True,
     # },
+    {
+        "parent": "news-cluster",
+        "child": "news-word_list",
+        "link_type": "category",
+        "is_mandatory": True,
+    },
+    {
+        "parent": "news-word_list",
+        "child": "news-search_query",
+        "link_type": "category",
+        "is_mandatory": True,
+        "is_multiple": True,
+    },
     {
         "parent": "geo-state",
         "child": "geo-municipality",

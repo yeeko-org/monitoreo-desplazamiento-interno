@@ -3,14 +3,14 @@ from rest_framework.permissions import IsAuthenticated
 
 from api.words.serializers import (
     MainGroupSerializer, ComplementaryGroupSerializer, NegativeGroupSerializer,
-    ListWordsSerializer)
+    WordListSerializer)
 from news.models import (
-    MainGroup, ComplementaryGroup, NegativeGroup, ListWords)
+    MainGroup, ComplementaryGroup, NegativeGroup, WordList)
 
 
-class ListWordsViewSet(ModelViewSet):
-    queryset = ListWords.objects.all()
-    serializer_class = ListWordsSerializer
+class WordListViewSet(ModelViewSet):
+    queryset = WordList.objects.all()
+    serializer_class = WordListSerializer
     permission_classes = [IsAuthenticated]
 
 
