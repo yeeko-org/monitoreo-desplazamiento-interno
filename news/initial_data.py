@@ -11,5 +11,4 @@ class InitClusters:
         ]
 
         for key_name, name in init_clusters:
-            Cluster.objects.get_or_create(
-                key_name=key_name, name=name)
+            Cluster.objects.get_or_create(name=name)

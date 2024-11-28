@@ -105,7 +105,7 @@ class InitCollections:
 
     def __init__(self):
         levels_dict = {level.key_name: level for level in Level.objects.all()}
-        # Collection.objects.all().delete()
+        Collection.objects.all().delete()
         order_base = 0
         order = 0
         for app_label, collections in all_collections.items():

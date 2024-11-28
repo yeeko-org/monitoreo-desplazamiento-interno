@@ -11,6 +11,7 @@ class SearchQuerySerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        print('update SearchQuerySerializer')
         instance = super().update(instance, validated_data)
         instance.save(do_words=True)
         return instance

@@ -33,7 +33,7 @@ class StatusControlViewSet(viewsets.ModelViewSet):
 
 
 class ClusterViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.AllowAny]
+    # permission_classes = [permissions.AllowAny]
     queryset = Cluster.objects.all()
     serializer_class = ClusterSerializer
     # filter_class = ClusterFilter

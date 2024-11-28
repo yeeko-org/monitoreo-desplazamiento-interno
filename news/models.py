@@ -24,7 +24,7 @@ class Source(models.Model):
 
 
 class Cluster(models.Model):
-    key_name = models.CharField(max_length=60, primary_key=True)
+    # key_name = models.CharField(max_length=60, primary_key=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     order = models.SmallIntegerField(default=5)
@@ -100,17 +100,17 @@ class SearchQuery(models.Model):
     name = models.CharField(max_length=100)
     query = models.TextField(blank=True, null=True)
     manual_query = models.TextField(blank=True, null=True)
+    # main_words = models.ManyToManyField(
+    #     MainGroup, related_name='queries', blank=True)
     main_words = models.ManyToManyField(
-        MainGroup, related_name='queries', blank=True)
-    main_words2 = models.ManyToManyField(
         WordList, related_name='main_queries', blank=True)
+    # complementary_words = models.ManyToManyField(
+    #     ComplementaryGroup, related_name='queries', blank=True)
     complementary_words = models.ManyToManyField(
-        ComplementaryGroup, related_name='queries', blank=True)
-    complementary_words2 = models.ManyToManyField(
         WordList, related_name='complementary_queries', blank=True)
+    # negative_words = models.ManyToManyField(
+    #     NegativeGroup, related_name='queries', blank=True)
     negative_words = models.ManyToManyField(
-        NegativeGroup, related_name='queries', blank=True)
-    negative_words2 = models.ManyToManyField(
         WordList, related_name='negative_queries', blank=True)
     when = models.CharField(
         max_length=10, help_text='1d', blank=True, null=True
@@ -119,16 +119,15 @@ class SearchQuery(models.Model):
     to_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    use_automatic_query = models.BooleanField(default=False)
+    use_automatic_query = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
 
     def save(self, *args, do_search=False, do_words=False, **kwargs):
-
-        if do_words and self.use_automatic_query:
-            # self.query_words()
-            self.query_words2()
+        print("Saving search query", do_search, do_words)
+        if do_words:
+            self.query_words()
 
         _save = super().save(*args, **kwargs)
 
@@ -138,11 +137,13 @@ class SearchQuery(models.Model):
         return _save
 
     def query_words(self):
+        print("Querying words")
         main_query = words_query_union(self.main_words.all())
         if not main_query:
             return
 
-        complementary_query = words_query_union(self.complementary_words.all())
+        complementary_query = words_query_union(
+            self.complementary_words.all())
         negative_terms = words_query_union(
             self.negative_words.all(), union="",
             funtion="get_negative_query")
@@ -159,33 +160,9 @@ class SearchQuery(models.Model):
         if negative_terms:
             self.query += f" {negative_terms}"
 
-    def query_words2(self):
-        main_query = words_query_union(self.main_words2.all())
-        if not main_query:
-            return
-
-        complementary_query = words_query_union(
-            self.complementary_words2.all())
-        negative_terms = words_query_union(
-            self.negative_words2.all(), union="",
-            funtion="get_negative_query")
-
-        if complementary_query or negative_terms:
-            self.query = f"({main_query})"
-        else:
-            self.query = main_query
-            return
-
-        if complementary_query:
-            self.query += f" AND ({complementary_query})"
-
-        if negative_terms:
-            self.query += f" {negative_terms}"
-
     def search(self):
-        if not self.query and self.use_automatic_query:
-            # self.query_words()
-            self.query_words2()
+        if not self.query:
+            self.query_words()
 
         if not self.query:
             raise ValueError("Query is empty")
@@ -239,6 +216,10 @@ class SearchQuery(models.Model):
         )
         link.querys.add(self)
         return link, is_created
+
+    class Meta:
+        verbose_name = 'Consulta'
+        verbose_name_plural = 'Consultas'
 
 
 class Link(models.Model):
