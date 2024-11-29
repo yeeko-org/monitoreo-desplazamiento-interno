@@ -4,8 +4,7 @@ from django.shortcuts import render, redirect
 from django.urls import path
 
 from .models import (
-    Link, Note, SearchQuery, SourceMethod, Source,
-    MainGroup, ComplementaryGroup, NegativeGroup, WordList)
+    Link, Note, SearchQuery, SourceMethod, Source,  WordList)
 
 
 @admin.register(Source)
@@ -17,21 +16,6 @@ class SourceAdmin(admin.ModelAdmin):
 @admin.register(WordList)
 class WordListAdmin(admin.ModelAdmin):
     list_display = ('main_word', 'cluster')
-
-
-@admin.register(MainGroup)
-class MainGroupAdmin(admin.ModelAdmin):
-    list_display = ('main_word',)
-
-
-@admin.register(ComplementaryGroup)
-class ComplementaryGroupAdmin(admin.ModelAdmin):
-    list_display = ('main_word',)
-
-
-@admin.register(NegativeGroup)
-class NegativeGroupAdmin(admin.ModelAdmin):
-    list_display = ('main_word',)
 
 
 @admin.register(SearchQuery)
@@ -77,7 +61,7 @@ def apply_selected_method(modeladmin, request, queryset):
     })
 
 
-apply_selected_method.short_description = "Scrapear con método seleccionado"
+apply_selected_method.short_description = "Scrapear con método seleccionado" # type: ignore
 
 
 class NoteInline(admin.StackedInline):
@@ -96,7 +80,8 @@ class LinkAdmin(admin.ModelAdmin):
     inlines = [NoteInline]
 
     def url_display(self, obj: Link):
-        return obj.real_url or obj.gnews_url[:50]
+        url = obj.real_url or obj.gnews_url
+        return url[:50]
 
     def notes_count(self, obj: Link):
         return obj.notes.count()

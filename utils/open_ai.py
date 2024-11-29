@@ -4,6 +4,10 @@ from typing import Optional
 import openai
 
 from django.conf import settings
+import tiktoken
+
+TOKENS_MAX_LENGTH = getattr(settings, 'OPENAI_TOKENS_MAX_LENGTH', 128000)
+MODEL_NAME = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o')
 
 
 def format_prompt_text(text: str, has_pipe: bool = False):
@@ -96,3 +100,23 @@ class JsonRequestOpenAI:
             return json.loads(json_response)
         except Exception:
             return None
+
+
+def truncate_text(plain_text, limit=None):
+    encoding = tiktoken.encoding_for_model(MODEL_NAME)
+    tokens = encoding.encode(plain_text)
+    token_count = len(tokens)
+
+    tokens_max_length = int((limit or TOKENS_MAX_LENGTH)/2)
+
+    if token_count > tokens_max_length:
+        tokens = tokens[:tokens_max_length]
+        truncated_text = encoding.decode(tokens)
+    else:
+        truncated_text = plain_text
+
+    return {
+        "original_token_count": token_count,
+        "truncated_text": truncated_text,
+        "truncated_text_count": len(encoding.encode(truncated_text))
+    }

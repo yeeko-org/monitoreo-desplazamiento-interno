@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 import requests
 
 from django.db import models
@@ -13,6 +14,7 @@ class Source(models.Model):
         default=True, verbose_name='Es una fuente de noticias')
     main_url = models.CharField(max_length=100, blank=True, null=True)
     order = models.SmallIntegerField(default=5)
+    exclude = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -33,7 +35,7 @@ class Cluster(models.Model):
         return self.name
 
     class Meta:
-        ordering = ['order']
+        ordering = ['order', 'name']
         verbose_name = 'Cluster'
         verbose_name_plural = 'Clusters'
 
@@ -164,17 +166,15 @@ class SearchQuery(models.Model):
             self.query += f" {negative_terms}"
 
     def search(self):
-        if not self.query:
+        if self.use_manual_query:
+            if not self.manual_query:
+                raise ValueError("Manual query is empty")
+            final_query = self.manual_query
+        else:
             self.query_words()
-
-        if not self.query:
-            raise ValueError("Query is empty")
-
-        if self.use_manual_query and not self.manual_query:
-            raise ValueError("Manual query is empty")
-
-        final_query = self.manual_query \
-            if self.use_manual_query else self.query
+            if not self.query:
+                raise ValueError("Query is empty")
+            final_query = self.query
 
         search_kwargs = {}
         if self.from_date and self.to_date:
@@ -233,7 +233,7 @@ class SearchQuery(models.Model):
 
 class Link(models.Model):
     gnews_url = models.URLField(max_length=800, unique=True)
-    real_url = models.URLField(blank=True, null=True)
+    real_url = models.URLField(max_length=800, blank=True, null=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
     source = models.ForeignKey(
@@ -243,17 +243,30 @@ class Link(models.Model):
         SearchQuery, related_name='links', blank=True)
     valid = models.BooleanField(blank=True, null=True)
 
+    notes: models.QuerySet["Note"]
+
     def __str__(self):
         return self.gnews_url[:30]
 
-    def get_content(self):
-        response = requests.get(self.gnews_url)
+    def get_response(self):
+        response = requests.get(self.real_url or self.gnews_url)
         if response.status_code == 200:
             if not self.real_url:
                 self.real_url = response.url
                 self.save()
-            return response.content
-        return None
+            return response
+
+    def get_content(self):
+        response = self.get_response()
+        return response.content if response else None
+
+    def get_content_text(self):
+        response = self.get_response()
+        if not response:
+            return ""
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, "html.parser")
+        return soup.get_text(separator="\n")
 
 
 class SourceMethod(models.Model):
@@ -323,7 +336,7 @@ class Note(models.Model):
     section = models.CharField(max_length=120, blank=True, null=True)
     pages = models.CharField(max_length=80, blank=True, null=True)
     title = models.CharField(max_length=200)
-    subtitle = models.CharField(max_length=200)
+    subtitle = models.CharField(max_length=200, blank=True, null=True)
     content = models.TextField()
     structured_content = models.JSONField(blank=True, null=True)
     status_register = models.ForeignKey(

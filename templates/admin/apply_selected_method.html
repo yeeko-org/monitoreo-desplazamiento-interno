@@ -15,7 +15,7 @@
     <label for="source_method">Seleccione un método:</label>
     <select name="source_method" id="source_method">
         {% for method in source_methods %}
-            <option value="{{ method.id }}">{{ method.domain }}</option>
+            <option value="{{ method.id }}">{{ method.name }}</option>
         {% endfor %}
     </select>
     
