@@ -114,11 +114,6 @@ class SearchQuery(models.Model):
     #     NegativeGroup, related_name='queries', blank=True)
     negative_words = models.ManyToManyField(
         WordList, related_name='negative_queries', blank=True)
-    when = models.CharField(
-        max_length=10, help_text='1d', blank=True, null=True
-    )
-    from_date = models.DateField(blank=True, null=True)
-    to_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     use_manual_query = models.BooleanField(default=True)
@@ -231,6 +226,25 @@ class SearchQuery(models.Model):
         verbose_name_plural = 'Consultas'
 
 
+class ApplyQuery(models.Model):
+
+    search_query = models.ForeignKey(
+        SearchQuery, on_delete=models.CASCADE, related_name='applys')
+    created_at = models.DateTimeField(auto_now_add=True)
+    when = models.CharField(
+        max_length=10, help_text='1d', blank=True, null=True
+    )
+    from_date = models.DateField(blank=True, null=True)
+    to_date = models.DateField(blank=True, null=True)
+
+    def __str__(self):
+        return self.search_query.name
+
+    class Meta:
+        verbose_name = 'Aplicación de consulta'
+        verbose_name_plural = 'Aplicaciones de consulta'
+
+
 class Link(models.Model):
     gnews_url = models.URLField(max_length=800, unique=True)
     real_url = models.URLField(max_length=800, blank=True, null=True)
@@ -240,7 +254,7 @@ class Link(models.Model):
         Source, on_delete=models.CASCADE, related_name='links')
     published_at = models.DateTimeField(blank=True, null=True)
     querys = models.ManyToManyField(
-        SearchQuery, related_name='links', blank=True)
+        ApplyQuery, related_name='links', blank=True)
     valid = models.BooleanField(blank=True, null=True)
 
     notes: models.QuerySet["Note"]
