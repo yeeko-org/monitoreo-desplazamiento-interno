@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.urls import path
 
 from .models import (
-    Link, Note, SearchQuery, SourceMethod, Source,  WordList)
+    Link, Note, SearchQuery, ApplyQuery, SourceMethod, Source,  WordList)
 
 
 @admin.register(Source)
@@ -33,7 +33,18 @@ class SearchQueryAdmin(admin.ModelAdmin):
         super().save_related(request, form, formsets, change)
         obj = form.instance
         obj.save(do_words=True)
-        results = obj.search_and_save()
+        
+
+
+@admin.register(ApplyQuery)
+class ApplyQueryAdmin(admin.ModelAdmin):
+    list_display = ('search_query', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('search_query__name',)
+
+    def save_model(self, request, obj: ApplyQuery, form, change):
+        obj.save()
+        results = obj.search_and_save_entries()
         messages.success(
             request, f"Se encontraron {results['total']} "
             f"resultados, se crearon {results['created']} links")
@@ -61,7 +72,7 @@ def apply_selected_method(modeladmin, request, queryset):
     })
 
 
-apply_selected_method.short_description = "Scrapear con método seleccionado" # type: ignore
+apply_selected_method.short_description = "Scrapear con método seleccionado"  # type: ignore
 
 
 class NoteInline(admin.StackedInline):
