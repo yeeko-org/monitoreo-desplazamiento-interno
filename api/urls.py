@@ -2,7 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from api.note.views import NoteContentView, NoteViewSet
-from api.query_search.views import SearchQueryViewSet
+from api.query_search.views import SearchQueryViewSet, ApplyQueryViewSet
 from api.words.views import WordListViewSet
 from api.auth.login_views import UserLoginAPIView
 
@@ -10,6 +10,7 @@ router = DefaultRouter()
 
 
 router.register('search_query', SearchQueryViewSet)
+router.register('apply_query', ApplyQueryViewSet)
 router.register('word_list', WordListViewSet)
 router.register('note', NoteViewSet)
 urlpatterns = [

@@ -22,3 +22,7 @@ class NoteOpenAI(JsonRequestOpenAI):
             2. **Subtitle**: Check if the text also contains a subtitle. If not, omit this information.
             3. **Content**: Analyze how much of the text is part of the news article based on the title.
         """
+
+
+class NoteAditionalOpenAi(JsonRequestOpenAI):
+    pass

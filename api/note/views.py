@@ -1,11 +1,13 @@
 from rest_framework import views
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.exceptions import ValidationError
 
 from api.note.serializers import NoteAndLinkSerializer
-from news.models import Link, Note, Source, SourceMethod
-from news.open_ai_note import NoteOpenAI
+from news.models import ApplyQuery, Link, Note, Source, SourceMethod
+from news.open_ai_note import NoteOpenAI, NoteAditionalOpenAi
 from utils.date_time import parse_gmt_date_list
 from utils.open_ai import truncate_text
 
@@ -37,6 +39,14 @@ class NoteContentView(views.APIView):
                 valid=link_valid
             )
         )
+
+        apply_query_id = data.get("apply_query_id")
+        if apply_query_id:
+            try:
+                query_origin = ApplyQuery.objects.get(pk=apply_query_id)
+                link.querys.add(query_origin)
+            except ApplyQuery.DoesNotExist:
+                pass
 
         if not link_is_created:
             link.valid = link_valid
@@ -81,7 +91,7 @@ class NoteContentView(views.APIView):
         json_content = note_open_ai.extract_information(link_content_text)
         if not json_content:
             return Response(data)
-        
+
         if not all([key in json_content for key in ["title", "content"]]):
             data["errors"] = ["No se pudo extraer el contenido por OpenAI"]
             return Response(data)
@@ -92,6 +102,7 @@ class NoteContentView(views.APIView):
             title=json_content.get("title"),
             subtitle=json_content.get("subtitle"),
             content=json_content.get("content"),
+            link_content_text=link_content_text
         )
 
         data["notes"] = [NoteAndLinkSerializer(note).data]
@@ -102,3 +113,15 @@ class NoteViewSet(ModelViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteAndLinkSerializer
     permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=["get"])
+    def aditional_info(self, request, pk=None):
+        note = self.get_object()
+        note_open_ai = NoteAditionalOpenAi()
+        try:
+            json_content = note_open_ai.extract_information(note.content)
+        except Exception:
+            raise ValidationError("No se pudo extraer el contenido por OpenAI")
+        note.structured_content = json_content
+        note.save()
+        return Response(json_content)
