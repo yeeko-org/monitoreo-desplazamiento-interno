@@ -1,3 +1,5 @@
+from datetime import date, datetime
+from typing import Optional
 from bs4 import BeautifulSoup
 import requests
 
@@ -77,18 +79,6 @@ class WordList(models.Model):
         return " ".join([f"-{word}" for word in self.get_all_words()])
 
 
-class MainGroup(WordList):
-    pass
-
-
-class ComplementaryGroup(WordList):
-    pass
-
-
-class NegativeGroup(WordList):
-    pass
-
-
 def words_query_union(words_query, union="OR", funtion="get_or_query"):
     if not union:
         union = " "
@@ -100,23 +90,19 @@ def words_query_union(words_query, union="OR", funtion="get_or_query"):
 
 class SearchQuery(models.Model):
     name = models.CharField(max_length=100)
+
     query = models.TextField(blank=True, null=True)
     manual_query = models.TextField(blank=True, null=True)
-    # main_words = models.ManyToManyField(
-    #     MainGroup, related_name='queries', blank=True)
+    use_manual_query = models.BooleanField(default=True)
+
     main_words = models.ManyToManyField(
         WordList, related_name='main_queries', blank=True)
-    # complementary_words = models.ManyToManyField(
-    #     ComplementaryGroup, related_name='queries', blank=True)
     complementary_words = models.ManyToManyField(
         WordList, related_name='complementary_queries', blank=True)
-    # negative_words = models.ManyToManyField(
-    #     NegativeGroup, related_name='queries', blank=True)
     negative_words = models.ManyToManyField(
         WordList, related_name='negative_queries', blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    use_manual_query = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     status_register = models.ForeignKey(
         StatusControl, on_delete=models.CASCADE, blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
@@ -124,17 +110,12 @@ class SearchQuery(models.Model):
     def __str__(self):
         return self.name
 
-    def save(self, *args, do_search=False, do_words=False, **kwargs):
-        print("Saving search query", do_search, do_words)
+    def save(self, *args, do_words=False, **kwargs):
+        print("Saving search query", do_words)
         if do_words:
             self.query_words()
 
-        _save = super().save(*args, **kwargs)
-
-        if do_search:
-            self.search()
-
-        return _save
+        return super().save(*args, **kwargs)
 
     def query_words(self):
         print("Querying words")
@@ -160,7 +141,10 @@ class SearchQuery(models.Model):
         if negative_terms:
             self.query += f" {negative_terms}"
 
-    def search(self):
+    def search(
+            self, when: Optional[str], from_date: Optional[date],
+            to_date: Optional[date]
+    ):
         if self.use_manual_query:
             if not self.manual_query:
                 raise ValueError("Manual query is empty")
@@ -172,17 +156,34 @@ class SearchQuery(models.Model):
             final_query = self.query
 
         search_kwargs = {}
-        if self.from_date and self.to_date:
-            search_kwargs["from_"] = self.from_date.strftime("%Y-%m-%d")
-            search_kwargs["to_"] = self.to_date.strftime("%Y-%m-%d")
+        if from_date and to_date:
+            search_kwargs["from_"] = from_date.strftime("%Y-%m-%d")
+            search_kwargs["to_"] = to_date.strftime("%Y-%m-%d")
         else:
-            search_kwargs = {"when": self.when or "1d"}
+            search_kwargs = {"when": when or "1d"}
         gn = GoogleNews("es", "MX")
         notes = gn.search(final_query, helper=True, **search_kwargs)
         return notes.get("entries", [])
 
-    def search_and_save(self):
-        entries = self.search()
+    class Meta:
+        verbose_name = 'Consulta'
+        verbose_name_plural = 'Consultas'
+
+
+class ApplyQuery(models.Model):
+
+    search_query = models.ForeignKey(
+        SearchQuery, on_delete=models.CASCADE, related_name='applys')
+    created_at = models.DateTimeField(auto_now_add=True)
+    when = models.CharField(
+        max_length=10, help_text='1d', blank=True, null=True
+    )
+    from_date = models.DateField(blank=True, null=True)
+    to_date = models.DateField(blank=True, null=True)
+
+    def search_and_save_entries(self):
+        entries = self.search_query.search(
+            self.when, self.from_date, self.to_date)
 
         sources = {}
         created_count = 0
@@ -220,22 +221,6 @@ class SearchQuery(models.Model):
         )
         link.querys.add(self)
         return link, is_created
-
-    class Meta:
-        verbose_name = 'Consulta'
-        verbose_name_plural = 'Consultas'
-
-
-class ApplyQuery(models.Model):
-
-    search_query = models.ForeignKey(
-        SearchQuery, on_delete=models.CASCADE, related_name='applys')
-    created_at = models.DateTimeField(auto_now_add=True)
-    when = models.CharField(
-        max_length=10, help_text='1d', blank=True, null=True
-    )
-    from_date = models.DateField(blank=True, null=True)
-    to_date = models.DateField(blank=True, null=True)
 
     def __str__(self):
         return self.search_query.name
@@ -356,6 +341,8 @@ class Note(models.Model):
     status_register = models.ForeignKey(
         StatusControl, on_delete=models.CASCADE, blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
+
+    link_content_text = models.TextField(blank=True, null=True)
 
     files: models.QuerySet["NoteFile"]
     status_register_id = str | None
