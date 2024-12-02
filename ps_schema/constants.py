@@ -36,13 +36,16 @@ all_collections = {
         },
         {
             "snake_name": "search_query",
-            "name": "Búsqueda de palabras",
-            "plural_name": "Búsquedas de palabras",
+            "name": "Consulta de palabras",
+            "plural_name": "Consultas de palabras",
             "model_name": "SearchQuery",
             "level": "primary",
             "status_groups": ["register"],
             "color": 'blue',
             "icon": 'search',
+            "cat_params": {
+                "init_display": True,
+            },
         },
     ],
     "geo": [
@@ -171,3 +174,32 @@ collection_links = [
         "is_mandatory": True,
     },
 ]
+
+
+def send_many_requests():
+    import requests
+    import json
+    import time
+
+    error_ids = [2107]
+    # 2075
+    all_ids = [
+        1902, 1896, 1843, 1833, 1832,
+        1737, 1724, 1699, 1690, 1688, 1665, 1663, 1643, 1639, 1605, 1577,
+        1574, 1571, 1564, 1561, 1521, 1520, 1515, 1513, 1501, 1450,
+        1405, 1403, 1323, 1314, 1302, 1270, 1238, 1102, 1010, 935, 859, 836,
+        835, 797, 776, 760, 718, 680, 671, 666, 572, 560, 423]
+    url = "https://ocsa.ibero.mx/api/rpc/approve_draft"
+    headers = {
+        'Content-Type': 'application/json',
+        "Authorization": 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoib2Nzd2ViYWRtaW4iLCJlbWFpbCI6InNlYmFzdGlhbi5vbHZlcmFAaWJlcm8ubXgifQ.boDDaOPQXa9Q3LMohHXQvuw85fR5rEKPcMxr4nqzGms'
+    }
+
+    for elem_id in all_ids:
+        payload = {'_id': elem_id}
+        with requests.Session() as session:
+            response = session.post(
+                url, headers=headers, data=json.dumps(payload))
+            if response.text:
+                print(f"elem_id: {elem_id} | response: {response.text}")
+        time.sleep(35)

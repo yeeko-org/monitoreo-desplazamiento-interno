@@ -19,21 +19,19 @@ from .all import CatalogsView  # noqa
 
 
 class SourceViewSet(viewsets.ModelViewSet):
-    # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Source.objects.all()
     serializer_class = SourceSerializer
 
 
 class StatusControlViewSet(viewsets.ModelViewSet):
-    # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     queryset = StatusControl.objects.all()
     serializer_class = StatusControlSerializer
 
 
 class ClusterViewSet(viewsets.ModelViewSet):
-    # permission_classes = [permissions.AllowAny]
+
     queryset = Cluster.objects.all()
     serializer_class = ClusterSerializer
     # filter_class = ClusterFilter

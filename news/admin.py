@@ -35,7 +35,6 @@ class SearchQueryAdmin(admin.ModelAdmin):
         obj.save(do_words=True)
         
 
-
 @admin.register(ApplyQuery)
 class ApplyQueryAdmin(admin.ModelAdmin):
     list_display = ('search_query', 'created_at')

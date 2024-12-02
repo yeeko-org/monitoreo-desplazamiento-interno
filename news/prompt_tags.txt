@@ -1,0 +1,514 @@
+
+I have a news article page scraped. I need identify the tags that contain my possible elements to extract the main information from, only if the content is available.
+
+Give me, in json format, for my possible elements, only the next attributes of the main html tag to extract the information:
+"class" (relevant class name(s) of the tag to identify the element(s))
+"tag" (tag name if is relevant to identify the element)
+"id" (id name of tag)
+"multiple" (boolean value indicating if the element is multiple times in the page)
+
+List of my possible elements:
+
+-title
+-subtitle
+-author
+-content (Main content of the article)
+
+If the information is not available, just omit the element field.
+
+Give me, at the end, only one attribute called "message" with the errors or problems getting successful data across all the elements.
+
+Finally, give me an attribute called "has_content" with a boolean value indicating if the key tags to extract the information of content are available in the page.
+
+NOTE: the HTML content could be cutted.
+
+====
+
+The title previously mentioned is: Plaza Izazaga 89 anuncia suspensión de operaciones "hasta nuevo aviso"
+<body>
+ <div id="root">
+  <main class="news" id="main-content">
+   <div class="content">
+    <article class="contenedor-detail-block news">
+     <div class="nd-title-headline-title-headline-base">
+      <h1 class="nd-title-headline-title-headline-base__title">
+       Plaza Izazaga 89 anuncia suspensión de operaciones "hasta nuevo aviso"
+      </h1>
+      <h2 class="nd-title-headline-title-headline-base__abstract">
+       Las autoridades planean aplicar extinción de dominio al inmueble por permitir actividades ilícitas reiteradas.
+      </h2>
+     </div>
+     <section class="nd-media-detail-base">
+      <ul class="nd-media-detail-base__carousel swiper-wrapper">
+       <li class="nd-media-detail-base__li swiper-slide">
+        <h3 class="nd-media-detail-base__caption">
+         Cierra Plaza Izazaga 89 tras operativo contra contrabando en CdMx | Cuartoscuro
+        </h3>
+       </li>
+      </ul>
+     </section>
+     <div class="content-columns nws">
+      <div class="column-left">
+       <div class="nd-content-body mrf-article-body">
+        <section class="content-art-info">
+         <div class="content-publish">
+          <span class="author">
+           Mauricio Ortiz
+          </span>
+          <div class="content-date">
+           <span class="location">
+            Ciudad de México, México
+           </span>
+           /
+           <time>
+            30.11.2024 16:34:00
+           </time>
+          </div>
+         </div>
+        </section>
+        <div class="media-container news" id="content-body">
+         <p>
+          La
+          <a href="https://www.milenio.com/politica/comunidad/plaza-izazaga-89-en-cdmx-como-es-y-que-productos-se-venden">
+           <strong>
+            Plaza Izazaga 89
+           </strong>
+           ,
+          </a>
+          ubicada en el centro histórico de la Ciudad de México, anunció el
+          <strong>
+           cierre de sus operaciones
+          </strong>
+          "hasta nuevo aviso" a través de un comunicado difundido en su página de Facebook.
+         </p>
+         <p>
+          El mensaje atribuye esta decisión a
+          <strong>
+           instrucciones directas de los propietarios del inmueble
+          </strong>
+          , sin detallar las razones específicas.
+         </p>
+         <div>
+          <section class="nd-related-news-detail-media-dual">
+           <span class="nd-related-news-detail-media-dual__title">
+            Te recomendamos:
+           </span>
+           <ul class="nd-related-news-detail-media-dual__container">
+            <li class="lr-list-row-row-related-new">
+             <figure class="lr-list-row-row-related-new__figure">
+              <figcaption class="lr-list-row-row-related-new__caption">
+               <a class="board-module__a" href="/negocios/extincion-dominio-izazaga-89-vender-contrabando">
+                ¿Qué es la extinción de dominio, que buscan aplicar en Izazaga 89 por vender contrabando?
+               </a>
+              </figcaption>
+             </figure>
+            </li>
+           </ul>
+          </section>
+         </div>
+         <p>
+          El anuncio ocurre en medio de un contexto de alta
+          <strong>
+           actividad policial y ministerial
+          </strong>
+          en el lugar.
+         </p>
+         <p>
+          De acuerdo con las autoridades, el operativo se llevó a cabo como parte de los
+          <strong>
+           compromisos
+          </strong>
+          del gobierno bajo el Tratado Comercial México, Estados Unidos y Canadá (TMEC), que busca
+          <strong>
+           combatir prácticas de contrabando
+          </strong>
+          y proteger la propiedad intelectual.
+         </p>
+         <p>
+          Entre los productos decomisados se encuentran
+          <strong>
+           mercancías
+          </strong>
+          de marcas como Disney, Nintendo, Marvel y Sanrio, acumulando un peso total de
+          <strong>
+           19 toneladas
+          </strong>
+          .
+         </p>
+         <p>
+          El secretario de Economía,
+          <strong>
+           <a href="https://www.milenio.com/politica/marcelo-ebrard-presenta-denuncia-ante-fgr-contra-plaza-izazaga">
+            Marcelo Ebrard
+           </a>
+          </strong>
+          , señaló que los operativos forman parte de una estrategia nacional para
+          <strong>
+           proteger a las industrias formales
+          </strong>
+          y detener actividades ilícitas.
+         </p>
+         <p>
+          En la calle
+          <strong>
+           Nezahualcóyotl
+          </strong>
+          , trasera al edificio, trabajadores han utilizado carretillas y vehículos para
+          <strong>
+           transportar grandes cantidades de mercancías
+          </strong>
+          hacia almacenes provisionales.
+         </p>
+         <h2>
+          <span>
+           Antecedentes de irregularidades
+          </span>
+         </h2>
+         <p>
+          Plaza Izazaga 89 ya había sido
+          <strong>
+           objeto de clausuras
+          </strong>
+          previas por posibles riesgos estructurales y presuntas actividades ilícitas, incluyendo el
+          <strong>
+           <a href="https://www.milenio.com/policia/realiza-cateos-plaza-izazaga-89-productos-chinos-no-originales">
+            almacenamiento y venta de mercancías piratas
+           </a>
+          </strong>
+          .
+         </p>
+         <p>
+          Este recinto, uno de los
+          <strong>
+           centros comerciales más grandes
+          </strong>
+          de la zona, es conocido por concentrar productos de origen asiático, principalmente chino, como
+          <strong>
+           bisutería, ropa, juguetes y artículos para el hogar
+          </strong>
+          .
+         </p>
+         <p>
+          El IMPI y las autoridades locales reiteraron que los operativos de este tipo
+          <strong>
+           continuarán en otros puntos estratégicos
+          </strong>
+          del país donde se identifiquen prácticas similares.
+         </p>
+         <p>
+          <strong>
+           Santiago Nieto
+          </strong>
+          , titular del IMPI, destacó que estas acciones buscan combatir delitos como
+          <strong>
+           evasión fiscal, lavado de dinero y contrabando
+          </strong>
+          .
+         </p>
+         <h2>
+          <span>
+           ¿Qué le pasará a plaza Izazaga?
+          </span>
+         </h2>
+         <p>
+          La
+          <strong>
+           Secretaría de Economía
+          </strong>
+          afirmó que estos operativos representan un mensaje contundente contra el contrabando y la piratería,
+          <strong>
+           buscando fortalecer la economía formal
+          </strong>
+          y respetar los compromisos internacionales adquiridos por México en el marco del
+          <strong>
+           TMEC
+          </strong>
+          .
+         </p>
+         <div>
+          <section class="nd-related-news-detail-media-dual">
+           <span class="nd-related-news-detail-media-dual__title">
+            Te recomendamos:
+           </span>
+           <ul class="nd-related-news-detail-media-dual__container">
+            <li class="lr-list-row-row-related-new">
+             <figure class="lr-list-row-row-related-new__figure">
+              <figcaption class="lr-list-row-row-related-new__caption">
+               <a class="board-module__a" href="/politica/marcelo-ebrard-presenta-denuncia-ante-fgr-contra-plaza-izazaga">
+                Ebrard presenta denuncia contra plaza Izazaga 89; busca extinción de dominio
+               </a>
+              </figcaption>
+             </figure>
+            </li>
+           </ul>
+          </section>
+         </div>
+         <p>
+          MO
+         </p>
+        </div>
+        <figure class="google-news-follow">
+         <a href="https://news.google.com/publications/CAAqBwgKMNyRggsw-N7-Ag?hl=es-419&amp;gl=MX&amp;ceid=MX:es-419">
+          <figcaption>
+           Síguenos en
+          </figcaption>
+         </a>
+        </figure>
+       </div>
+       <ul class="nd-tags-detail-base">
+        <li class="nd-tags-detail-base__title">
+         TAGS RELACIONADOS:
+        </li>
+        <li class="nd-tags-detail-base__tags">
+         <a class="nd-tags-detail-base__tag" href="/temas/centro-historico">
+          Centro Histórico
+         </a>
+         <a class="nd-tags-detail-base__tag" href="/temas/contrabando">
+          Contrabando
+         </a>
+        </li>
+       </ul>
+       <figure class="nd-disclaimer-base">
+        <figcaption class="nd-disclaimer-base__notice">
+         Queda prohibida la reproducción total o parcial del contenido de esta página, mismo que es propiedad de MILENIO DIARIO, S.A. DE C.V.; su reproducción no autorizada constituye una infracción y un delito de conformidad con las leyes aplicables.
+        </figcaption>
+       </figure>
+       <!-- Se volvieron a cargar los comentarios de facebook  -->
+      </div>
+     </div>
+    </article>
+    <div class="not-loaded" id="camus-cookie-disclaimer">
+     <div class="message">
+      <span>
+       Utilizamos cookies para darte la mejor experiencia de usuario y entrega de publicidad, entre otras cosas. Si continúas navegando el sitio, das tu consentimiento para utilizar dicha tecnología, según nuestra
+       <a class="cookies-policy" href="/aviso-de-politica-de-cookies">
+        Política de cookies
+       </a>
+       . Puedes cambiar la configuración en tu navegador cuando gustes.
+      </span>
+     </div>
+     <div class="options">
+      <a class="btn secondary" href="/aviso-de-politica-de-cookies">
+       Quiero saber más
+      </a>
+     </div>
+    </div>
+   </div>
+  </main>
+ </div>
+</body>
+
+====
+
+{
+    "title": {
+        "class": "nd-title-headline-title-headline-base__title"
+        "tag": "h1",
+        "multiple": false
+    },
+    "subtitle": {
+        "class": "nd-title-headline-title-headline-base__abstract"
+        "tag": "h2",
+        "multiple": false
+    },
+    "author": {
+        "class": "author",
+        "multiple": false
+    },
+    "content": {
+        "class": "media-container news",
+        "id": "content-body",
+        "multiple": false
+    },
+    "message": "",
+    "has_content": true
+}
+
+====
+
+The title previously mentioned is: Millones de mujeres y niñas obligadas a huir se enfrentan a un alto riesgo de violencia de género: ONU
+<body class="controls-visible signed-out public-page" itemscope="" itemtype="http://schema.org/NewsArticle">
+ <div class="iter-page-frame">
+  <div class="iter-content-wrapper iter-droppable-zone" id="iter-content-wrapper">
+   <div class="content ly-detail" id="main-content">
+    <div class="container">
+     <div class="row r02">
+      <div class="col-md-8 col-sm-12 portlet-column nopadding" id="r02c01">
+       <div class="portlet-boundary portlet-static-end content-viewer-portlet advanced-no-1 last full-access restricted" id="">
+        <div class="template-no-1">
+         <h1 class="headline font-1 bold fs26">
+          <span class="priority-content">
+           Millones de mujeres y niñas obligadas a huir se enfrentan a un alto riesgo de violencia de género: ONU
+          </span>
+         </h1>
+         <div class="lead font-1 fs18">
+          Los datos de la ONU revelan que las denuncias de violencia sexual relacionada con los conflictos aumentaron en un 50 por ciento el año pasado con respecto a 2023, y las mujeres y las niñas representaron el 95 por ciento de los casos verificados, aunque esos números son una fracción de la realidad ya que muchos casos no se denuncian
+         </div>
+         <div class="block">
+          <div class="info">
+           <div class="bylines font-2 bold fs12">
+            <a href="/cronologia/-/meta/onu-noticias">
+             ONU Noticias
+            </a>
+            |
+           </div>
+           <div class="date font-2 fs12">
+            01/12/2024
+           </div>
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="portlet-boundary portlet-static-end content-viewer-portlet advanced-no-2 last full-access restricted" id="">
+        <div class="template-no-2">
+         <div class="multimediaMacroWrapper">
+          <ul class="bxMultimedia9624591">
+           <div class="contentMedia art-gallery">
+            <a class="cutlineShow" href="/internacional/millones-de-mujeres-y-ninas-obligadas-a-huir-se-enfrentan-a-un-alto-riesgo-de-violencia-de-genero-onu-LX9624591">
+             <figure class="cutlineShow">
+              <div class="cutline">
+               <span class="cutline-text">
+                Miles de refugiados cruzan la frontera con Chad huyendo de la violencia en Sudán.
+               </span>
+               (
+               <span class="byline-image">
+                Foto: ACNUR/Aristophane Ngargoune
+               </span>
+               )
+              </div>
+             </figure>
+            </a>
+           </div>
+          </ul>
+         </div>
+        </div>
+       </div>
+       <div class="portlet-boundary portlet-static-end content-viewer-portlet advanced-no-3 last full-access restricted" id="">
+        <div class="template-no-3" id="acceder">
+         <div class="text resizable font-2 fs15">
+          <div class="paragraph">
+           <p>
+            Más de 60 millones de mujeres y niñas que se encuentran desplazadas por la fuerza o son apátridas se enfrentan a un alto riesgo de violencia de género, pero el financiamiento para los servicios vitales que las apoyan es lamentablemente escasa, advirtió la Agencia de la ONU para los Refugiados (ACNUR).
+           </p>
+           <p>
+            Los datos de la ONU revelan que las denuncias de violencia sexual relacionada con los conflictos aumentaron en un 50% el año pasado con respecto a 2023, y las mujeres y las niñas representaron el 95% de los casos verificados.
+           </p>
+           <p>
+            Sin embargo, estas cifras “representan una pequeña fracción de la realidad”, ya que muchos casos no se denuncian, apuntó la Agencia.
+           </p>
+           <p>
+            <b>
+             Acceso a la justicia limitado
+            </b>
+           </p>
+           <p>
+            “En muchos lugares remotos, el acceso humanitario está cortado o los recursos y la asistencia son escasos. El acceso a la justicia también sigue siendo limitado y los supervivientes temen represalias y marginación social”, dijo la portavoz de ACNUR, Shabia Mantoo.
+           </p>
+           <p>
+            Mantoo detalló que los trabajadores que operan en situaciones de conflicto reciben noticias constantes de supervivientes que han sufrido violencia brutal, tortura, explotación sexual, violencia sexual y otros horrores, incluso como arma de guerra.
+           </p>
+           <p>
+            En la República Democrática del Congo, por ejemplo, los cuerpos de las mujeres y las niñas se han convertido en una extensión del campo de batalla en medio de la violencia cíclica y el empeoramiento de la inseguridad, aún en los lugares de desplazamiento. Además, los informes de violencia de género aumentaron este año, y la violación constituye la mayoría de los abusos.
+           </p>
+           <p>
+            “En Chad, las mujeres han denunciado haber sido violadas mientras huían del conflicto en Sudán”, citó Mantoo.
+           </p>
+           <p>
+            “En Afganistán, las crecientes restricciones a las mujeres y las niñas, las altas tasas de violencia doméstica en el hogar y el empeoramiento general de la situación económica están contribuyendo a una crisis de salud mental, y los socios del ACNUR informan de un aumento del número de pacientes que buscan ayuda”.
+           </p>
+           <p>
+            <b>
+             Riesgos durante los desplazamientos
+            </b>
+           </p>
+           <p>
+            Las mujeres refugiadas y migrantes que se desplazan por las rutas hacia el Mediterráneo siguen denunciando que se enfrentan a la violencia y la explotación sexuales, la esclavitud y la trata de personas. Los organismos humanitarios estiman que el 90% son violadas.
+           </p>
+           <p>
+            Mientras tanto, las supervivientes de la violencia sexual que han huido a los países vecinos suelen permanecer en situaciones precarias, debido a los riesgos adicionales de violencia de género que pueden afrontar durante su desplazamiento y a las demoras en el acceso a los servicios, que pueden ser limitados.
+           </p>
+           <p>
+            “Además de la violencia sexual relacionada con el conflicto, las mujeres y las niñas desplazadas por la fuerza también se enfrentan a altos riesgos de violencia de pareja. En determinados entornos de desplazamiento, se estima que los riesgos para ellas son un 20% superiores a los de las mujeres y las niñas no desplazadas”, precisó la portavoz de ACNUR.
+           </p>
+           <p>
+            Además, las formas interrelacionadas de discriminación también aumentan los riesgos, incluso para las mujeres y niñas con discapacidad, las que viven en la pobreza o que tienen orientaciones sexuales, identidades de género, expresiones de género y características sexuales diversas, añadió.
+           </p>
+           <p>
+            <b>
+             Las medidas tempranas de prevención salvan vidas
+            </b>
+           </p>
+           <p>
+            Mantoo argumentó que las medidas tempranas y efectivas de prevención y respuesta a la violencia de género para las mujeres y niñas afectadas por el desplazamiento forzado y el conflicto salvan y cambian vidas, pero hizo hincapié en que el financiamiento está muy por debajo de las necesidades.
+           </p>
+           <p>
+            “Por ejemplo, para seis grandes planes regionales de respuesta a los refugiados –que cubren las necesidades humanitarias de los refugiados de la República Democrática del Congo, Afganistán, Sudán, Ucrania, Sudán del Sur y Siria– la programación de la violencia de género para todo el año para todas las organizaciones participantes, que asciende a 236 millones de dólares, actualmente sólo está financiada en un 28%”, precisó.
+           </p>
+           <p>
+            ACNUR ha destacado especialmente este problema durante los 16 Días de Activismo contra la Violencia de Género, una campaña mundial anual que se lleva a cabo del 25 de noviembre al 10 de diciembre.
+           </p>
+           <p>
+            La Agencia teme que sin el financiamiento adecuado, millones de mujeres y niñas desplazadas por la fuerza no puedan acceder a servicios esenciales el próximo año.
+           </p>
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="portlet-boundary portlet-static-end content-viewer-portlet last full-access restricted" id="">
+        <div class="template-no-12">
+         <div class="metas">
+          <div class="item_tema t_65294772">
+           <div class="keywords font-2 fs13">
+            <a href="/cronologia/-/meta/mujeres">
+             #Mujeres
+            </a>
+           </div>
+          </div>
+          <div class="item_tema t_164197247">
+           <div class="keywords font-2 fs13">
+            <a href="/cronologia/-/meta/ninas">
+             #Niñas
+            </a>
+           </div>
+          </div>
+          <div class="item_tema t_353095907">
+           <div class="keywords font-2 fs13">
+            <a href="/cronologia/-/meta/desplazadas">
+             #Desplazadas
+            </a>
+           </div>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</body>
+
+====
+
+{
+    "title": {
+        "class": "headline"
+        "tag": "h1",
+        "multiple": false
+    },
+    "subtitle": {
+        "class": "lead",
+        "multiple": false
+    },
+    "author": {
+        "class": "bylines font-2 bold fs12",
+        "multiple": false
+    },
+    "content": {
+        "class": "paragraph",
+        "multiple": false
+    },
+    "message": "",
+    "has_content": true
+}

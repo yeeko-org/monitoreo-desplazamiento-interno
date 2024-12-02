@@ -27,71 +27,43 @@ class JsonRequestOpenAI:
     first_response: dict
     prompt: str
 
-    def __init__(self):
+    def __init__(self, prompt_path: str):
         openai_api_key = getattr(settings, 'OPENAI_API_KEY', None)
 
         self.client = openai.OpenAI(api_key=openai_api_key)
         self.engine = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o')
+        self.messages: list[dict] = []
+        with open(prompt_path, "r", encoding="utf-8") as file:
+            init_prompt = file.read()
+        msgs = init_prompt.split("\n====\n")
+        self.build_msg(msgs[0], "system")
+        for idx, msg in enumerate(msgs[1:]):
+            role = "user" if idx % 2 == 0 else "assistant"
+            self.build_msg(msg, role)
         self.first_example = ""
         self.first_response = {}
         self.prompt = ""
 
-    def extract_information(self, text) -> Optional[dict]:
-
-        if not text:
+    def send_prompt(self, new_prompt) -> Optional[dict]:
+        if not new_prompt:
             return None
+        self.build_msg(new_prompt, "user")
 
-        messages = [
-            {
-                "role": "system",
-                "content": [
-                        {
-                            "type": "text",
-                            "text": format_prompt_text(self.prompt)
-                        }
-                ]
-            },
-            {
-                "role": "user",
-                "content": [
-                        {
-                            "type": "text",
-                            "text": self.first_example
-                        }
-                ]
-            },
-            {
-                "role": "assistant",
-                "content": [
-                        {
-                            "type": "text",
-                            "text": format_prompt_text(
-                                json.dumps(self.first_response), has_pipe=True)
-                        }
-                ]
-            },
-            {
-                "role": "user",
-                "content": [
-                        {
-                            "type": "text",
-                            "text": text
-                        }
-                ]
-            },
-
-        ]
-
-        response = self.client.chat.completions.create(
-            model=self.engine,
-            response_format={"type": "json_object"},
-            messages=messages,  # type: ignore
-            temperature=1,
-            max_tokens=4096,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0
-        )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.engine,
+                response_format={"type": "json_object"},
+                messages=self.messages,
+                temperature=0.6,
+                max_tokens=16000,
+                top_p=0.8,
+                frequency_penalty=0,
+                presence_penalty=0
+            )
+        except openai.BadRequestError as e:
+            print(f"messages: {self.messages}")
+            print(f"OpenAI BadRequestError: {e}")
+            raise e
 
         json_response = response.choices[0].message.content
         if not json_response:
@@ -100,6 +72,21 @@ class JsonRequestOpenAI:
             return json.loads(json_response)
         except Exception:
             return None
+
+    def build_msg(self, prompt, role="user"):
+        # print("-"*50)
+        # print(f"role: {role}\nprompt: {prompt}\n")
+        if len(prompt) > 9000:
+            prompt = prompt[:9000]
+        self.messages.append({
+            "role": role,
+            "content": [
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ]
+        })
 
 
 def truncate_text(plain_text, limit=None):

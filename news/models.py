@@ -1,22 +1,38 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, Any
 from bs4 import BeautifulSoup
 import requests
 
 from django.db import models
-from pygooglenews import GoogleNews
+from utils.yeeko_gnews import YeekoGoogleNews
 
 from category.models import StatusControl
 from utils.date_time import parse_gmt_date_list
 
 
 class Source(models.Model):
+
+    NATIONAL_CHOICES = [
+        ('Nal', 'Nacional'),
+        ('Int', 'Internacional'),
+        ('For', 'Extranjera'),
+    ]
+
     name = models.CharField(max_length=100)
     is_news = models.BooleanField(
         default=True, verbose_name='Es una fuente de noticias')
     main_url = models.CharField(max_length=100, blank=True, null=True)
     order = models.SmallIntegerField(default=5)
-    exclude = models.BooleanField(default=False)
+    # exclude = models.BooleanField(default=False)
+    scraper_message = models.TextField(blank=True, null=True)
+    # is_foreign = models.BooleanField(
+    #     default=False, verbose_name='Es extranjera no internacional')
+    national = models.CharField(
+        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+    has_content = models.BooleanField(
+        blank=True, null=True, verbose_name='Es scrapeable')
+    is_active = models.BooleanField(
+        blank=True, null=True, verbose_name='Activa')
 
     def __str__(self):
         return self.name
@@ -44,21 +60,10 @@ class Cluster(models.Model):
 
 class WordList(models.Model):
     cluster = models.ForeignKey(
-        Cluster, on_delete=models.CASCADE, related_name='words',
-        blank=True, null=True)
+        Cluster, on_delete=models.CASCADE, related_name='words')
     main_word = models.CharField(max_length=100, unique=True)
     alternative_words = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        if not self.alternative_words:
-            return self.main_word
-
-        alternative_list = self.alternative_words.split(",")
-        alt_words = ", ".join(alternative_list[:2])
-        if len(alternative_list) > 2:
-            alt_words = alt_words + ", ..."
-        return f"{self.main_word} ({alt_words})"
 
     def get_all_words(self):
         if not self.alternative_words:
@@ -77,6 +82,21 @@ class WordList(models.Model):
 
     def get_negative_query(self):
         return " ".join([f"-{word}" for word in self.get_all_words()])
+
+    def __str__(self):
+        if not self.alternative_words:
+            return self.main_word
+
+        alternative_list = self.alternative_words.split(",")
+        alt_words = ", ".join(alternative_list[:2])
+        if len(alternative_list) > 2:
+            alt_words = alt_words + ", ..."
+        return f"{self.main_word} ({alt_words})"
+
+    class Meta:
+        verbose_name = 'Lista de palabras'
+        verbose_name_plural = 'Listas de palabras'
+        ordering = ['cluster', 'main_word']
 
 
 def words_query_union(words_query, union="OR", funtion="get_or_query"):
@@ -138,11 +158,13 @@ class SearchQuery(models.Model):
         if complementary_query:
             self.query += f" AND ({complementary_query})"
 
+        self.query += "{{DATE}}"
+
         if negative_terms:
             self.query += f" {negative_terms}"
 
     def search(
-            self, when: Optional[str], from_date: Optional[date],
+            self, when: Any, from_date: Optional[date],
             to_date: Optional[date]
     ):
         if self.use_manual_query:
@@ -160,10 +182,20 @@ class SearchQuery(models.Model):
             search_kwargs["from_"] = from_date.strftime("%Y-%m-%d")
             search_kwargs["to_"] = to_date.strftime("%Y-%m-%d")
         else:
+            try:
+                when = int(when)
+                when = f"{when}d"
+            except ValueError:
+                pass
             search_kwargs = {"when": when or "1d"}
-        gn = GoogleNews("es", "MX")
-        notes = gn.search(final_query, helper=True, **search_kwargs)
-        return notes.get("entries", [])
+        # gn = GoogleNews("es", "MX")
+        gn = YeekoGoogleNews("es", "MX")
+        print("Searching...\n", final_query, "\n", search_kwargs)
+        notes_data = gn.search(final_query, helper=False, **search_kwargs)
+        # for key, value in notes_data.items():
+        #     if key != "entries":
+        #         print(key, value)
+        return notes_data
 
     class Meta:
         verbose_name = 'Consulta'
@@ -173,7 +205,7 @@ class SearchQuery(models.Model):
 class ApplyQuery(models.Model):
 
     search_query = models.ForeignKey(
-        SearchQuery, on_delete=models.CASCADE, related_name='applys')
+        SearchQuery, on_delete=models.CASCADE, related_name='applied')
     created_at = models.DateTimeField(auto_now_add=True)
     when = models.CharField(
         max_length=10, help_text='1d', blank=True, null=True
@@ -182,8 +214,9 @@ class ApplyQuery(models.Model):
     to_date = models.DateField(blank=True, null=True)
 
     def search_and_save_entries(self):
-        entries = self.search_query.search(
+        notes_data = self.search_query.search(
             self.when, self.from_date, self.to_date)
+        entries = notes_data.get("entries")
 
         sources = {}
         created_count = 0
@@ -219,7 +252,7 @@ class ApplyQuery(models.Model):
                     entry.get("published_parsed"))
             )
         )
-        link.querys.add(self)
+        link.queries.add(self)
         return link, is_created
 
     def __str__(self):
@@ -234,13 +267,14 @@ class Link(models.Model):
     gnews_url = models.URLField(max_length=800, unique=True)
     real_url = models.URLField(max_length=800, blank=True, null=True)
     title = models.CharField(max_length=200)
-    description = models.TextField()
+    # description = models.TextField()
     source = models.ForeignKey(
         Source, on_delete=models.CASCADE, related_name='links')
     published_at = models.DateTimeField(blank=True, null=True)
-    querys = models.ManyToManyField(
+    queries = models.ManyToManyField(
         ApplyQuery, related_name='links', blank=True)
-    valid = models.BooleanField(blank=True, null=True)
+    # valid = models.BooleanField(blank=True, null=True)
+    is_dfi = models.BooleanField(blank=True, null=True)
 
     notes: models.QuerySet["Note"]
 
@@ -257,6 +291,8 @@ class Link(models.Model):
 
     def get_content(self):
         response = self.get_response()
+        if response:
+            response.encoding = 'utf-8'
         return response.content if response else None
 
     def get_content_text(self):
@@ -267,24 +303,80 @@ class Link(models.Model):
         soup = BeautifulSoup(response.text, "html.parser")
         return soup.get_text(separator="\n")
 
+    def get_content_text_rick(self):
+        # response = self.get_response()
+        # if not response:
+        #     return ""
+        # response = requests.get(
+        #     'https://www.infobae.com/mexico/2024/11/30/desplazamiento-forzado-en-sinaloa-una-violencia-que-ataca-por-tres-frentes/')
+        # response = requests.get(
+        #     'https://www.milenio.com/politica/comunidad/cierra-plaza-izazaga-89-tras-operativo-contra-contrabando-en-cdmx')
+        # response = requests.get(
+        #     'https://laverdadnoticias.com/crimen/crisis-en-sinaloa-18-mil-familias-desplazadas-por-violencia-y-sequias-20241130')
+        # title = "Crisis en Sinaloa: 18 mil familias desplazadas por violencia y sequías"
+        response = requests.get(
+            'https://programasparaelbienestar.gob.mx/con-programas-para-el-bienestar-gobierno-atiende-a-pobladores-desplazados-en-chiapas/')
+        title = "Con Programas para el Bienestar, Gobierno atiende a pobladores desplazados en Chiapas"
+        response.encoding = 'utf-8'
+        soup = BeautifulSoup(response.text, "html.parser")
+        body = soup.body
+        if title not in body.get_text():
+            title = None
+
+        excluded_tags = [
+            'script', 'style', 'noscript', 'svg', 'button', 'input',
+            'textarea', 'select', 'option', 'form', 'fieldset', 'canvas',
+            'nav', 'aside', 'address', 'map', 'area',
+            'legend', 'iframe', 'embed', 'object', 'param', 'video', 'audio']
+        for excluded_tag in excluded_tags:
+            for tag in body.find_all(excluded_tag):
+                tag.decompose()
+        main_tags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']
+        begin_title = not bool(title)
+        for tag in body.find_all():
+            tag_text = tag.get_text(strip=True)
+            if not tag_text and tag.name not in main_tags:
+                tag.decompose()
+            if not begin_title:
+                direct_text = tag.string
+                if direct_text and title in direct_text:
+                    begin_title = True
+            if not begin_title:
+                if title not in tag_text:
+                    tag.decompose()
+
+        allowed_attrs = ['class', 'id', 'href', 'src', 'alt', 'title']
+        # new_body = BeautifulSoup('', 'html.parser')
+        for tag in body.find_all():
+            relevant_attrs = {
+                key: value for key, value in tag.attrs.items()
+                if key in allowed_attrs
+            }
+            tag.attrs = relevant_attrs
+        # print("Body3:", body.prettify())
+        new_html = body.prettify()
+        return new_html, body.get_text(separator="\n")
+
 
 class SourceMethod(models.Model):
 
     name = models.CharField(max_length=200)
 
-    title_tag = models.CharField(max_length=200)
-    subtitle_tag = models.CharField(max_length=200)
-    content_tag = models.TextField()
+    title_tag = models.CharField(
+        max_length=200, blank=True, null=True)
+    subtitle_tag = models.CharField(
+        max_length=200, blank=True, null=True)
+    content_tag = models.TextField(blank=True, null=True)
+    tags = models.JSONField(blank=True, null=True)
 
-    validated = models.BooleanField(default=False)
-    sources = models.ManyToManyField(
-        Source, related_name='methods', blank=True)
+    # validated = models.BooleanField(default=False)
+    # sources = models.ManyToManyField(
+    #     Source, related_name='methods', blank=True)
+    source = models.ForeignKey(
+        Source, on_delete=models.CASCADE, related_name='methods')
 
-    def _valid_source(self, source: Source):
-        return self.sources.filter(pk=source.pk).exists()
-
-    def __str__(self):
-        return self.name
+    # def _valid_source(self, source: Source):
+    #     return self.sources.filter(pk=source.pk).exists()
 
     def note_by_link(self, link: Link):
         from bs4 import BeautifulSoup
@@ -321,6 +413,51 @@ class SourceMethod(models.Model):
             source=link.source
         )
 
+    def note_by_link_rick(self, link: Link, saved_title: str = None):
+        from bs4 import BeautifulSoup
+        link_content = link.get_content()
+        if not link_content:
+            return None
+        soup = BeautifulSoup(link_content, 'html.parser')
+
+        def get_element(tag_info: dict):
+            elem_id = tag_info.get("id")
+            elem_class = tag_info.get("class")
+            elem_tag = tag_info.get("tag")
+            if elem_tag:
+                return soup.find(elem_tag, id=elem_id, class_=elem_class)
+            else:
+                return soup.find(id=elem_id, class_=elem_class)
+
+        def get_data(key):
+            if value := self.tags.get(key):
+                element = get_element(value)
+                if not element:
+                    return None
+                return element.get_text(separator="\n", strip=True)
+
+        title = saved_title or get_data('title')
+        content = get_data('content')
+        if not (title and content):
+            return None
+
+        return Note.objects.create(
+            title=title,
+            content=content,
+            link=link,
+            source_method=self,
+            source=link.source,
+            subtitle=get_data('subtitle'),
+            author=get_data('author'),
+        )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = 'Método de fuente'
+        verbose_name_plural = 'Métodos de fuente'
+
 
 class Note(models.Model):
     source = models.ForeignKey(
@@ -331,18 +468,27 @@ class Note(models.Model):
     source_method = models.ForeignKey(
         SourceMethod, on_delete=models.CASCADE, related_name='notes',
         null=True, blank=True)
+
+    title = models.CharField(max_length=255)
     author = models.CharField(max_length=255, blank=True, null=True)
+    subtitle = models.CharField(
+        max_length=255, blank=True, null=True)
     section = models.CharField(max_length=120, blank=True, null=True)
     pages = models.CharField(max_length=80, blank=True, null=True)
-    title = models.CharField(max_length=200)
-    subtitle = models.CharField(max_length=200, blank=True, null=True)
-    content = models.TextField()
+
+    content = models.TextField(blank=True, null=True)
+    content_full = models.TextField(blank=True, null=True)
+
+    full_html = models.TextField(blank=True, null=True)
+    full_text = models.TextField(blank=True, null=True)
+
     structured_content = models.JSONField(blank=True, null=True)
+
     status_register = models.ForeignKey(
         StatusControl, on_delete=models.CASCADE, blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
 
-    link_content_text = models.TextField(blank=True, null=True)
+    # link_content_text = models.TextField(blank=True, null=True)
 
     files: models.QuerySet["NoteFile"]
     status_register_id = str | None

@@ -25,7 +25,7 @@ class SearchQuerySerializer(serializers.ModelSerializer):
 
 class WhenSerializer(serializers.Serializer):
     when = serializers.CharField(
-        max_length=10, allow_blank=True, allow_null=True)
+        max_length=10, allow_blank=True, allow_null=True, required=False)
     from_date = serializers.DateField(allow_null=True)
     to_date = serializers.DateField(allow_null=True)
 

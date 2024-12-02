@@ -129,6 +129,7 @@ class InitCollections:
                     'open_insertion', None)
                 new_collection.order = order_base + order
                 new_collection.all_filters = collection.get('all_filters', [])
+                new_collection.cat_params = collection.get('cat_params', {})
                 new_collection.save()
                 # print(f"Order: {order_base + order}\n{defaults}")
             order_base += 10
