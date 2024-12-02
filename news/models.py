@@ -1,5 +1,5 @@
-from datetime import date, datetime
-from typing import Optional, Any
+from datetime import date
+from typing import List, Optional, Any
 from bs4 import BeautifulSoup
 import requests
 
@@ -65,7 +65,7 @@ class WordList(models.Model):
     alternative_words = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
-    def get_all_words(self):
+    def get_all_words(self, enclose_sentences=True):
         if not self.alternative_words:
             words = [self.main_word]
         else:
@@ -73,7 +73,7 @@ class WordList(models.Model):
 
         standard_words = [word.strip() for word in words]
         return [
-            f'"{word}"' if " " in word else word
+            f'"{word}"' if " " in word and enclose_sentences else word
             for word in standard_words
         ]
 
@@ -195,7 +195,32 @@ class SearchQuery(models.Model):
         # for key, value in notes_data.items():
         #     if key != "entries":
         #         print(key, value)
+        notes_data['entries'] = self.search_filter_soft(
+            notes_data.get("entries", []))
+
         return notes_data
+
+    def search_filter_soft(self, entries: List[dict]):
+        entries_filtered = []
+        all_negative_words = []
+        for word_list in self.negative_words.all():
+            all_negative_words.extend(
+                word_list.get_all_words(enclose_sentences=False))
+
+        all_negative_words = [
+            word.strip().lower() for word in all_negative_words if word.strip()]
+
+        for entry in entries:
+            title = entry.get("title", "").lower()
+            summary = entry.get("summary", "").lower()
+            if any([
+                word in title or word in summary
+                for word in all_negative_words
+            ]):
+                continue
+
+            entries_filtered.append(entry)
+        return entries_filtered
 
     class Meta:
         verbose_name = 'Consulta'
@@ -216,7 +241,7 @@ class ApplyQuery(models.Model):
     def search_and_save_entries(self):
         notes_data = self.search_query.search(
             self.when, self.from_date, self.to_date)
-        entries = notes_data.get("entries")
+        entries = notes_data.get("entries", [])
 
         sources = {}
         created_count = 0
@@ -320,6 +345,8 @@ class Link(models.Model):
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, "html.parser")
         body = soup.body
+        if not body:
+            return ""
         if title not in body.get_text():
             title = None
 
@@ -411,44 +438,6 @@ class SourceMethod(models.Model):
             content=content,
             source_method=self,
             source=link.source
-        )
-
-    def note_by_link_rick(self, link: Link, saved_title: str = None):
-        from bs4 import BeautifulSoup
-        link_content = link.get_content()
-        if not link_content:
-            return None
-        soup = BeautifulSoup(link_content, 'html.parser')
-
-        def get_element(tag_info: dict):
-            elem_id = tag_info.get("id")
-            elem_class = tag_info.get("class")
-            elem_tag = tag_info.get("tag")
-            if elem_tag:
-                return soup.find(elem_tag, id=elem_id, class_=elem_class)
-            else:
-                return soup.find(id=elem_id, class_=elem_class)
-
-        def get_data(key):
-            if value := self.tags.get(key):
-                element = get_element(value)
-                if not element:
-                    return None
-                return element.get_text(separator="\n", strip=True)
-
-        title = saved_title or get_data('title')
-        content = get_data('content')
-        if not (title and content):
-            return None
-
-        return Note.objects.create(
-            title=title,
-            content=content,
-            link=link,
-            source_method=self,
-            source=link.source,
-            subtitle=get_data('subtitle'),
-            author=get_data('author'),
         )
 
     def __str__(self):
