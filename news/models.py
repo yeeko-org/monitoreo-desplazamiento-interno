@@ -1,13 +1,16 @@
-from datetime import date, datetime
-from typing import Optional, Any
+from datetime import date
+import json
+from pprint import pprint
+from typing import List, Optional, Any
 from bs4 import BeautifulSoup
 import requests
 
 from django.db import models
+from utils.open_ai import JsonRequestOpenAI
 from utils.yeeko_gnews import YeekoGoogleNews
 
 from category.models import StatusControl
-from utils.date_time import parse_gmt_date_list
+from utils.date_time import get_range_dates, parse_gmt_date_list
 
 
 class Source(models.Model):
@@ -65,7 +68,7 @@ class WordList(models.Model):
     alternative_words = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
-    def get_all_words(self):
+    def get_all_words(self, enclose_sentences=True):
         if not self.alternative_words:
             words = [self.main_word]
         else:
@@ -73,7 +76,7 @@ class WordList(models.Model):
 
         standard_words = [word.strip() for word in words]
         return [
-            f'"{word}"' if " " in word else word
+            f'"{word}"' if " " in word and enclose_sentences else word
             for word in standard_words
         ]
 
@@ -177,25 +180,151 @@ class SearchQuery(models.Model):
                 raise ValueError("Query is empty")
             final_query = self.query
 
-        search_kwargs = {}
-        if from_date and to_date:
-            search_kwargs["from_"] = from_date.strftime("%Y-%m-%d")
-            search_kwargs["to_"] = to_date.strftime("%Y-%m-%d")
+        if when:
+            notes_data = self.search_when(when, final_query)
+        elif from_date and to_date:
+            notes_data = self.search_from_to(from_date, to_date, final_query)
         else:
-            try:
-                when = int(when)
-                when = f"{when}d"
-            except ValueError:
-                pass
-            search_kwargs = {"when": when or "1d"}
-        # gn = GoogleNews("es", "MX")
+            raise ValueError("No dates provided")
+
+        return {
+            "entries": self.pre_clasify_openai(
+                self.search_filter_soft(notes_data.get("entries", []))),
+            "feed": notes_data.get("feed")
+        }
+
+    def search_from_to(
+            self, from_date: date, to_date: date, search_query: str
+    ):
+
+        search_kwargs = {}
+        range_dates = get_range_dates(None, from_date, to_date)
+        all_notes_data = []
+        last_feed = None
+        for from_date_r, to_date_r in range_dates:
+
+            search_kwargs["from_"] = from_date_r.strftime("%Y-%m-%d")
+            search_kwargs["to_"] = to_date_r.strftime("%Y-%m-%d")
+
+            gn = YeekoGoogleNews("es", "MX")
+            print("Searching...\n", search_query, "\n", search_kwargs)
+            notes_data = gn.search(search_query, helper=False, **search_kwargs)
+            all_notes_data.extend(notes_data.get("entries", []))
+            last_feed = notes_data.get("feed", None)
+
+        return {
+            "entries": all_notes_data,
+            "feed": last_feed
+        }
+
+    def search_when(
+            self, when: Any, search_query: str
+    ):
+        try:
+            when = int(when)
+            when = f"{when}d"
+        except ValueError:
+            pass
+        search_kwargs = {"when": when or "1d"}
         gn = YeekoGoogleNews("es", "MX")
-        print("Searching...\n", final_query, "\n", search_kwargs)
-        notes_data = gn.search(final_query, helper=False, **search_kwargs)
-        # for key, value in notes_data.items():
-        #     if key != "entries":
-        #         print(key, value)
-        return notes_data
+        print("Searching...\n", search_query, "\n", search_kwargs)
+        return gn.search(search_query, helper=False, **search_kwargs)
+
+    def search_filter_soft(self, entries: List[dict]):
+        entries_filtered = []
+        all_negative_words = []
+        for word_list in self.negative_words.all():
+            all_negative_words.extend(
+                word_list.get_all_words(enclose_sentences=False))
+
+        all_negative_words = [
+            word.strip().lower() for word in all_negative_words if word.strip()]
+
+        for entry in entries:
+            title = entry.get("title", "").lower()
+            summary = entry.get("summary", "").lower()
+            if any([
+                word in title or word in summary
+                for word in all_negative_words
+            ]):
+                continue
+
+            entries_filtered.append(entry)
+        return entries_filtered
+
+    def pre_clasify_openai(self, entries: List[dict]):
+
+        entries_for_openai = []
+        foreign_sources = Source.objects.filter(national="For").values_list(
+            "main_url", flat=True)
+        for entry in entries:
+            title = entry.get("title")
+            gnews_id = entry.get("id")
+            gnews_url = entry.get("link")
+            gnews_source_url = entry.get("source", {}).get("href")
+            gnews_source_title = entry.get("source", {}).get("title")
+            if gnews_source_url in foreign_sources:
+                continue
+
+            link = Link.objects.filter(gnews_url=gnews_url).first()
+            if link:
+                if link.is_dfi is not None or link.pre_is_dfi is not None:
+                    continue
+
+            entries_for_openai.append({
+                "title": title,
+                "id": gnews_id,
+                "source_url": gnews_source_url,
+                "source_title": gnews_source_title
+            })
+        if not entries_for_openai:
+            return entries
+
+        full_prompt = json.dumps(entries_for_openai)
+
+        pre_clasify_request = JsonRequestOpenAI("news/prompt_pre_clasify.txt")
+        pre_clasify_response = pre_clasify_request.send_prompt(full_prompt)
+        if not pre_clasify_response:
+            return entries
+
+        """
+        title, id, source_url, source_title, is_dfi, source_is_foreign
+        """
+        pre_clasify_data = {}
+        new_foreign_sources = []
+        pprint(pre_clasify_response)
+        articles = pre_clasify_response.get("articles", [])
+        for entry in articles:
+            print("Entry type:" + str(type(entry)))
+            print(entry)
+            gnews_id = entry.get("id")
+
+            gnews_source_url = entry.get("source_url")
+            gnews_source_title = entry.get("source_title")
+            gnews_source_is_foreign = entry.get("source_is_foreign")
+
+            # Actualizacion automatica y/o creacion de fuente?
+            if gnews_source_is_foreign:
+                new_foreign_sources.append(gnews_source_url)
+
+            pre_clasify_data[gnews_id] = entry
+
+        if new_foreign_sources:
+            new_foreign_sources = list(set(new_foreign_sources))
+            # agregar title a la data y crear las existentes
+            Source.objects.filter(
+                main_url__in=new_foreign_sources, national__isnull=True).update(
+                national="For"
+            )
+
+        for entry in entries:
+            gnews_id = entry.get("id")
+            if gnews_id in pre_clasify_data:
+                entry["pre_is_dfi"] = pre_clasify_data[gnews_id].get("is_dfi")
+                entry["source"]["is_foreign"] = pre_clasify_data[
+                    gnews_id].get("source_is_foreign")
+
+        return entries
 
     class Meta:
         verbose_name = 'Consulta'
@@ -216,7 +345,7 @@ class ApplyQuery(models.Model):
     def search_and_save_entries(self):
         notes_data = self.search_query.search(
             self.when, self.from_date, self.to_date)
-        entries = notes_data.get("entries")
+        entries = notes_data.get("entries", [])
 
         sources = {}
         created_count = 0
@@ -284,6 +413,7 @@ class Link(models.Model):
 
     # valid = models.BooleanField(blank=True, null=True)
     is_dfi = models.BooleanField(blank=True, null=True)
+    pre_is_dfi = models.BooleanField(blank=True, null=True)
 
     notes: models.QuerySet["Note"]
 
@@ -329,6 +459,8 @@ class Link(models.Model):
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, "html.parser")
         body = soup.body
+        if not body:
+            return ""
         if title not in body.get_text():
             title = None
 
@@ -420,44 +552,6 @@ class SourceMethod(models.Model):
             content=content,
             source_method=self,
             source=link.source
-        )
-
-    def note_by_link_rick(self, link: Link, saved_title: str = None):
-        from bs4 import BeautifulSoup
-        link_content = link.get_content()
-        if not link_content:
-            return None
-        soup = BeautifulSoup(link_content, 'html.parser')
-
-        def get_element(tag_info: dict):
-            elem_id = tag_info.get("id")
-            elem_class = tag_info.get("class")
-            elem_tag = tag_info.get("tag")
-            if elem_tag:
-                return soup.find(elem_tag, id=elem_id, class_=elem_class)
-            else:
-                return soup.find(id=elem_id, class_=elem_class)
-
-        def get_data(key):
-            if value := self.tags.get(key):
-                element = get_element(value)
-                if not element:
-                    return None
-                return element.get_text(separator="\n", strip=True)
-
-        title = saved_title or get_data('title')
-        content = get_data('content')
-        if not (title and content):
-            return None
-
-        return Note.objects.create(
-            title=title,
-            content=content,
-            link=link,
-            source_method=self,
-            source=link.source,
-            subtitle=get_data('subtitle'),
-            author=get_data('author'),
         )
 
     def __str__(self):
