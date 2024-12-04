@@ -1,9 +1,19 @@
 from rest_framework import serializers
 
-from news.models import SearchQuery, ApplyQuery
+from api.note.serializers import LinkSerializer
+from news.models import Link, SearchQuery, ApplyQuery
+
+
 
 
 class SearchQuerySerializer(serializers.ModelSerializer):
+
+    links =  serializers.SerializerMethodField()
+
+    def get_links(self, obj):
+        return LinkSerializer(
+            Link.objects.filter(queries__search_query__id=obj.id),
+            many=True).data
 
     def create(self, validated_data):
         # save m2m fields

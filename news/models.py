@@ -1,13 +1,16 @@
 from datetime import date
+import json
+from pprint import pprint
 from typing import List, Optional, Any
 from bs4 import BeautifulSoup
 import requests
 
 from django.db import models
+from utils.open_ai import JsonRequestOpenAI
 from utils.yeeko_gnews import YeekoGoogleNews
 
 from category.models import StatusControl
-from utils.date_time import parse_gmt_date_list
+from utils.date_time import get_range_dates, parse_gmt_date_list
 
 
 class Source(models.Model):
@@ -177,28 +180,55 @@ class SearchQuery(models.Model):
                 raise ValueError("Query is empty")
             final_query = self.query
 
-        search_kwargs = {}
-        if from_date and to_date:
-            search_kwargs["from_"] = from_date.strftime("%Y-%m-%d")
-            search_kwargs["to_"] = to_date.strftime("%Y-%m-%d")
+        if when:
+            notes_data = self.search_when(when, final_query)
+        elif from_date and to_date:
+            notes_data = self.search_from_to(from_date, to_date, final_query)
         else:
-            try:
-                when = int(when)
-                when = f"{when}d"
-            except ValueError:
-                pass
-            search_kwargs = {"when": when or "1d"}
-        # gn = GoogleNews("es", "MX")
-        gn = YeekoGoogleNews("es", "MX")
-        print("Searching...\n", final_query, "\n", search_kwargs)
-        notes_data = gn.search(final_query, helper=False, **search_kwargs)
-        # for key, value in notes_data.items():
-        #     if key != "entries":
-        #         print(key, value)
-        notes_data['entries'] = self.search_filter_soft(
-            notes_data.get("entries", []))
+            raise ValueError("No dates provided")
 
-        return notes_data
+        return {
+            "entries": self.pre_clasify_openai(
+                self.search_filter_soft(notes_data.get("entries", []))),
+            "feed": notes_data.get("feed")
+        }
+
+    def search_from_to(
+            self, from_date: date, to_date: date, search_query: str
+    ):
+
+        search_kwargs = {}
+        range_dates = get_range_dates(None, from_date, to_date)
+        all_notes_data = []
+        last_feed = None
+        for from_date_r, to_date_r in range_dates:
+
+            search_kwargs["from_"] = from_date_r.strftime("%Y-%m-%d")
+            search_kwargs["to_"] = to_date_r.strftime("%Y-%m-%d")
+
+            gn = YeekoGoogleNews("es", "MX")
+            print("Searching...\n", search_query, "\n", search_kwargs)
+            notes_data = gn.search(search_query, helper=False, **search_kwargs)
+            all_notes_data.extend(notes_data.get("entries", []))
+            last_feed = notes_data.get("feed", None)
+
+        return {
+            "entries": all_notes_data,
+            "feed": last_feed
+        }
+
+    def search_when(
+            self, when: Any, search_query: str
+    ):
+        try:
+            when = int(when)
+            when = f"{when}d"
+        except ValueError:
+            pass
+        search_kwargs = {"when": when or "1d"}
+        gn = YeekoGoogleNews("es", "MX")
+        print("Searching...\n", search_query, "\n", search_kwargs)
+        return gn.search(search_query, helper=False, **search_kwargs)
 
     def search_filter_soft(self, entries: List[dict]):
         entries_filtered = []
@@ -221,6 +251,80 @@ class SearchQuery(models.Model):
 
             entries_filtered.append(entry)
         return entries_filtered
+
+    def pre_clasify_openai(self, entries: List[dict]):
+
+        entries_for_openai = []
+        foreign_sources = Source.objects.filter(national="For").values_list(
+            "main_url", flat=True)
+        for entry in entries:
+            title = entry.get("title")
+            gnews_id = entry.get("id")
+            gnews_url = entry.get("link")
+            gnews_source_url = entry.get("source", {}).get("href")
+            gnews_source_title = entry.get("source", {}).get("title")
+            if gnews_source_url in foreign_sources:
+                continue
+
+            link = Link.objects.filter(gnews_url=gnews_url).first()
+            if link:
+                if link.is_dfi is not None or link.pre_is_dfi is not None:
+                    continue
+
+            entries_for_openai.append({
+                "title": title,
+                "id": gnews_id,
+                "source_url": gnews_source_url,
+                "source_title": gnews_source_title
+            })
+        if not entries_for_openai:
+            return entries
+
+        full_prompt = json.dumps(entries_for_openai)
+
+        pre_clasify_request = JsonRequestOpenAI("news/prompt_pre_clasify.txt")
+        pre_clasify_response = pre_clasify_request.send_prompt(full_prompt)
+        if not pre_clasify_response:
+            return entries
+
+        """
+        title, id, source_url, source_title, is_dfi, source_is_foreign
+        """
+        pre_clasify_data = {}
+        new_foreign_sources = []
+        pprint(pre_clasify_response)
+        articles = pre_clasify_response.get("articles", [])
+        for entry in articles:
+            print("Entry type:" + str(type(entry)))
+            print(entry)
+            gnews_id = entry.get("id")
+
+            gnews_source_url = entry.get("source_url")
+            gnews_source_title = entry.get("source_title")
+            gnews_source_is_foreign = entry.get("source_is_foreign")
+
+            # Actualizacion automatica y/o creacion de fuente?
+            if gnews_source_is_foreign:
+                new_foreign_sources.append(gnews_source_url)
+
+            pre_clasify_data[gnews_id] = entry
+
+        if new_foreign_sources:
+            new_foreign_sources = list(set(new_foreign_sources))
+            # agregar title a la data y crear las existentes
+            Source.objects.filter(
+                main_url__in=new_foreign_sources, national__isnull=True).update(
+                national="For"
+            )
+
+        for entry in entries:
+            gnews_id = entry.get("id")
+            if gnews_id in pre_clasify_data:
+                entry["pre_is_dfi"] = pre_clasify_data[gnews_id].get("is_dfi")
+                entry["source"]["is_foreign"] = pre_clasify_data[
+                    gnews_id].get("source_is_foreign")
+
+        return entries
 
     class Meta:
         verbose_name = 'Consulta'
@@ -300,6 +404,7 @@ class Link(models.Model):
         ApplyQuery, related_name='links', blank=True)
     # valid = models.BooleanField(blank=True, null=True)
     is_dfi = models.BooleanField(blank=True, null=True)
+    pre_is_dfi = models.BooleanField(blank=True, null=True)
 
     notes: models.QuerySet["Note"]
 
