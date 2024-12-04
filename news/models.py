@@ -67,20 +67,15 @@ class Cluster(models.Model):
 class WordList(models.Model):
     cluster = models.ForeignKey(
         Cluster, on_delete=models.CASCADE, related_name='words')
-    # LUCIAN: SE BORRARÁN
-    main_word = models.CharField(max_length=100, unique=True)
-    alternative_words = models.TextField(blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    # LUCIAN: NUEVOS CAMPOS:
-    # name = models.CharField(max_length=255)
-    # query_words = models.TextField(blank=True, null=True)
-    # soft_query_words = models.TextField(blank=True, null=True)
+    name = models.CharField(max_length=255, unique=True)
+    query_words = models.TextField(blank=True, null=True)
+    soft_query_words = models.TextField(blank=True, null=True)
 
     def get_all_words(self, enclose_sentences=True):
-        if not self.alternative_words:
-            words = [self.main_word]
+        if not self.query_words:
+            return []
         else:
-            words = [self.main_word] + self.alternative_words.split(",")
+            words = self.query_words.split(",")
 
         standard_words = [word.strip() for word in words]
         return [
@@ -95,19 +90,19 @@ class WordList(models.Model):
         return " ".join([f"-{word}" for word in self.get_all_words()])
 
     def __str__(self):
-        if not self.alternative_words:
-            return self.main_word
+        if not self.query_words:
+            return self.name
 
-        alternative_list = self.alternative_words.split(",")
-        alt_words = ", ".join(alternative_list[:2])
-        if len(alternative_list) > 2:
+        query_list = self.query_words.split(",")
+        alt_words = ", ".join(query_list[:2])
+        if len(query_list) > 2:
             alt_words = alt_words + ", ..."
-        return f"{self.main_word} ({alt_words})"
+        return f"{self.name} ({alt_words})"
 
     class Meta:
         verbose_name = 'Lista de palabras'
         verbose_name_plural = 'Listas de palabras'
-        ordering = ['cluster', 'main_word']
+        ordering = ['cluster', 'name']
 
 
 def words_query_union(words_query, union="OR", funtion="get_or_query"):

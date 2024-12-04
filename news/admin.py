@@ -15,7 +15,7 @@ class SourceAdmin(admin.ModelAdmin):
 
 @admin.register(WordList)
 class WordListAdmin(admin.ModelAdmin):
-    list_display = ('main_word', 'cluster')
+    list_display = ('name', 'cluster')
 
 
 @admin.register(SearchQuery)
