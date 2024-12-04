@@ -266,12 +266,12 @@ class SearchQuery(models.Model):
         entries_for_openai = []
         foreign_sources = Source.objects.filter(national="For").values_list(
             "main_url", flat=True)
-        for entry in entries:
-            title = entry.get("title")
-            gnews_id = entry.get("id")
-            gnews_url = entry.get("link")
-            gnews_source_url = entry.get("source", {}).get("href")
-            gnews_source_title = entry.get("source", {}).get("title")
+        for openai_entry in entries:
+            title = openai_entry.get("title")
+            gnews_id = openai_entry.get("id", "")
+            gnews_url = openai_entry.get("link")
+            gnews_source_url = openai_entry.get("source", {}).get("href")
+            gnews_source_title = openai_entry.get("source", {}).get("title")
             if gnews_source_url in foreign_sources:
                 continue
 
@@ -282,7 +282,7 @@ class SearchQuery(models.Model):
 
             entries_for_openai.append({
                 "title": title,
-                "id": gnews_id,
+                "id": gnews_id[:40],
                 "source_url": gnews_source_url,
                 "source_title": gnews_source_title
             })
@@ -301,22 +301,25 @@ class SearchQuery(models.Model):
         """
         pre_clasify_data = {}
         new_foreign_sources = []
-        pprint(pre_clasify_response)
-        articles = pre_clasify_response.get("articles", [])
-        for entry in articles:
-            print("Entry type:" + str(type(entry)))
-            print(entry)
-            gnews_id = entry.get("id")
+        openai_articles = pre_clasify_response.get("articles", [])
 
-            gnews_source_url = entry.get("source_url")
-            gnews_source_title = entry.get("source_title")
-            gnews_source_is_foreign = entry.get("source_is_foreign")
+        for openai_entry in openai_articles:
+            if not isinstance(openai_entry, dict):
+                continue
+
+            oai_id = openai_entry.get("id")
+
+            if not oai_id:
+                continue
+
+            gnews_source_url = openai_entry.get("source_url")
+            gnews_source_is_foreign = openai_entry.get("source_is_foreign")
 
             # Actualizacion automatica y/o creacion de fuente?
             if gnews_source_is_foreign:
                 new_foreign_sources.append(gnews_source_url)
 
-            pre_clasify_data[gnews_id] = entry
+            pre_clasify_data[oai_id] = openai_entry
 
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
@@ -327,10 +330,16 @@ class SearchQuery(models.Model):
 
         for entry in entries:
             gnews_id = entry.get("id")
-            if gnews_id in pre_clasify_data:
-                entry["pre_is_dfi"] = pre_clasify_data[gnews_id].get("is_dfi")
-                entry["source"]["pre_national"] = pre_clasify_data[
-                    gnews_id].get("source_is_foreign")
+            if not gnews_id:
+                continue
+
+            pre_clasify_entry = pre_clasify_data.get(gnews_id[:40], {})
+            if pre_clasify_entry:
+                continue
+
+            entry["pre_is_dfi"] = pre_clasify_entry.get("is_dfi")
+            entry["source"]["pre_national"] = pre_clasify_entry\
+                .get("source_is_foreign")
 
         return entries
 
