@@ -124,6 +124,8 @@ class SearchQuery(models.Model):
         WordList, related_name='complementary_queries', blank=True)
     negative_words = models.ManyToManyField(
         WordList, related_name='negative_queries', blank=True)
+    # soft_negative_words = models.ManyToManyField(
+    #     WordList, related_name='soft_negative_queries', blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     status_register = models.ForeignKey(
@@ -167,7 +169,7 @@ class SearchQuery(models.Model):
             self.query += f" {negative_terms}"
 
     def search(
-            self, when: Any, from_date: Optional[date],
+            self, when: Optional[Any], from_date: Optional[date],
             to_date: Optional[date]
     ):
         if self.use_manual_query:
@@ -187,9 +189,13 @@ class SearchQuery(models.Model):
         else:
             raise ValueError("No dates provided")
 
+        entries = self.search_filter_soft(
+            notes_data.get("entries", []))
+        # if not when:
+        #     entries = self.pre_clasify_openai(entries)
+
         return {
-            "entries": self.pre_clasify_openai(
-                self.search_filter_soft(notes_data.get("entries", []))),
+            "entries": entries,
             "feed": notes_data.get("feed")
         }
 
@@ -334,17 +340,17 @@ class SearchQuery(models.Model):
 class ApplyQuery(models.Model):
 
     search_query = models.ForeignKey(
-        SearchQuery, on_delete=models.CASCADE, related_name='applied')
+        SearchQuery, on_delete=models.CASCADE, related_name='apply_queries')
     created_at = models.DateTimeField(auto_now_add=True)
-    when = models.CharField(
-        max_length=10, help_text='1d', blank=True, null=True
-    )
+    # when = models.CharField(
+    #     max_length=10, help_text='1d', blank=True, null=True
+    # )
     from_date = models.DateField(blank=True, null=True)
     to_date = models.DateField(blank=True, null=True)
 
     def search_and_save_entries(self):
         notes_data = self.search_query.search(
-            self.when, self.from_date, self.to_date)
+            None, self.from_date, self.to_date)
         entries = notes_data.get("entries", [])
 
         sources = {}
@@ -442,62 +448,6 @@ class Link(models.Model):
         soup = BeautifulSoup(response.text, "html.parser")
         return soup.get_text(separator="\n")
 
-    def get_content_text_rick(self):
-        # response = self.get_response()
-        # if not response:
-        #     return ""
-        # response = requests.get(
-        #     'https://www.infobae.com/mexico/2024/11/30/desplazamiento-forzado-en-sinaloa-una-violencia-que-ataca-por-tres-frentes/')
-        # response = requests.get(
-        #     'https://www.milenio.com/politica/comunidad/cierra-plaza-izazaga-89-tras-operativo-contra-contrabando-en-cdmx')
-        # response = requests.get(
-        #     'https://laverdadnoticias.com/crimen/crisis-en-sinaloa-18-mil-familias-desplazadas-por-violencia-y-sequias-20241130')
-        # title = "Crisis en Sinaloa: 18 mil familias desplazadas por violencia y sequías"
-        response = requests.get(
-            'https://programasparaelbienestar.gob.mx/con-programas-para-el-bienestar-gobierno-atiende-a-pobladores-desplazados-en-chiapas/')
-        title = "Con Programas para el Bienestar, Gobierno atiende a pobladores desplazados en Chiapas"
-        response.encoding = 'utf-8'
-        soup = BeautifulSoup(response.text, "html.parser")
-        body = soup.body
-        if not body:
-            return ""
-        if title not in body.get_text():
-            title = None
-
-        excluded_tags = [
-            'script', 'style', 'noscript', 'svg', 'button', 'input',
-            'textarea', 'select', 'option', 'form', 'fieldset', 'canvas',
-            'nav', 'aside', 'address', 'map', 'area',
-            'legend', 'iframe', 'embed', 'object', 'param', 'video', 'audio']
-        for excluded_tag in excluded_tags:
-            for tag in body.find_all(excluded_tag):
-                tag.decompose()
-        main_tags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']
-        begin_title = not bool(title)
-        for tag in body.find_all():
-            tag_text = tag.get_text(strip=True)
-            if not tag_text and tag.name not in main_tags:
-                tag.decompose()
-            if not begin_title:
-                direct_text = tag.string
-                if direct_text and title in direct_text:
-                    begin_title = True
-            if not begin_title:
-                if title not in tag_text:
-                    tag.decompose()
-
-        allowed_attrs = ['class', 'id', 'href', 'src', 'alt', 'title']
-        # new_body = BeautifulSoup('', 'html.parser')
-        for tag in body.find_all():
-            relevant_attrs = {
-                key: value for key, value in tag.attrs.items()
-                if key in allowed_attrs
-            }
-            tag.attrs = relevant_attrs
-        # print("Body3:", body.prettify())
-        new_html = body.prettify()
-        return new_html, body.get_text(separator="\n")
-
 
 class SourceMethod(models.Model):
 
@@ -572,7 +522,8 @@ class Note(models.Model):
         SourceMethod, on_delete=models.CASCADE, related_name='notes',
         null=True, blank=True)
 
-    title = models.CharField(max_length=255)
+    # title = models.CharField(max_length=255)
+    title = models.TextField(blank=True, null=True)
     author = models.CharField(max_length=255, blank=True, null=True)
     subtitle = models.CharField(
         max_length=255, blank=True, null=True)

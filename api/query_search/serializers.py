@@ -4,11 +4,17 @@ from api.note.serializers import LinkSerializer
 from news.models import Link, SearchQuery, ApplyQuery
 
 
+class ApplyQuerySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ApplyQuery
+        fields = '__all__'
 
 
 class SearchQuerySerializer(serializers.ModelSerializer):
 
-    links =  serializers.SerializerMethodField()
+    links = serializers.SerializerMethodField(read_only=True)
+    apply_queries = ApplyQuerySerializer(many=True, read_only=True)
 
     def get_links(self, obj):
         return LinkSerializer(
@@ -39,9 +45,3 @@ class WhenSerializer(serializers.Serializer):
     from_date = serializers.DateField(allow_null=True)
     to_date = serializers.DateField(allow_null=True)
 
-
-class ApplyQuerySerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = ApplyQuery
-        fields = '__all__'

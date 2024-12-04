@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
 
-from api.note.serializers import NoteAndLinkSerializer, LinkFullSerializer
+from api.note.serializers import NoteAndLinkSerializer, LinkSerializer
 from news.models import ApplyQuery, Link, Note, Source, SourceMethod
 from utils.open_ai import JsonRequestOpenAI
 
@@ -64,7 +64,7 @@ class NoteViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["get"])
-    def aditional_info(self, request, pk=None):
+    def additional_info(self, request, pk=None):
         note = self.get_object()
         note_open_ai = JsonRequestOpenAI('news/note_prompt.txt')
         try:
@@ -78,20 +78,15 @@ class NoteViewSet(ModelViewSet):
 
 class LinkViewSet(ModelViewSet):
     queryset = Link.objects.all()
-    # serializer_class = NoteAndLinkSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_serializer_class(self):
-        actions = {
-            "get_note_content": LinkFullSerializer,
-        }
-
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["patch"])
     def get_note_content(self, request, pk=None):
         from news.note_utils import NoteContent
-        link = self.get_object()
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = LinkSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_link = serializer.save()
 
-        note_content = NoteContent(link)
+        note_content = NoteContent(new_link)
         return note_content()
