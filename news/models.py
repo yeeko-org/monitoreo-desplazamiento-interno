@@ -37,6 +37,9 @@ class Source(models.Model):
     is_active = models.BooleanField(
         blank=True, null=True, verbose_name='Activa')
 
+    pre_national = models.CharField(
+        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+
     def __str__(self):
         return self.name
 
@@ -268,12 +271,12 @@ class SearchQuery(models.Model):
         entries_for_openai = []
         foreign_sources = Source.objects.filter(national="For").values_list(
             "main_url", flat=True)
-        for entry in entries:
-            title = entry.get("title")
-            gnews_id = entry.get("id")
-            gnews_url = entry.get("link")
-            gnews_source_url = entry.get("source", {}).get("href")
-            gnews_source_title = entry.get("source", {}).get("title")
+        for openai_entry in entries:
+            title = openai_entry.get("title")
+            gnews_id = openai_entry.get("id", "")
+            gnews_url = openai_entry.get("link")
+            gnews_source_url = openai_entry.get("source", {}).get("href")
+            gnews_source_title = openai_entry.get("source", {}).get("title")
             if gnews_source_url in foreign_sources:
                 continue
 
@@ -284,7 +287,7 @@ class SearchQuery(models.Model):
 
             entries_for_openai.append({
                 "title": title,
-                "id": gnews_id,
+                "id": gnews_id[:40],
                 "source_url": gnews_source_url,
                 "source_title": gnews_source_title
             })
@@ -303,37 +306,45 @@ class SearchQuery(models.Model):
         """
         pre_classify_data = {}
         new_foreign_sources = []
-        pprint(pre_classify_response)
-        articles = pre_classify_response.get("articles", [])
-        for entry in articles:
-            print("Entry type:" + str(type(entry)))
-            print(entry)
-            gnews_id = entry.get("id")
+        openai_articles = pre_classify_response.get("articles", [])
 
-            gnews_source_url = entry.get("source_url")
-            gnews_source_title = entry.get("source_title")
-            gnews_source_is_foreign = entry.get("source_is_foreign")
+        for openai_entry in openai_articles:
+            if not isinstance(openai_entry, dict):
+                continue
+
+            oai_id = openai_entry.get("id")
+
+            if not oai_id:
+                continue
+
+            gnews_source_url = openai_entry.get("source_url")
+            gnews_source_is_foreign = openai_entry.get("source_is_foreign")
 
             # Actualización automática y/o creación de fuente?
             if gnews_source_is_foreign:
                 new_foreign_sources.append(gnews_source_url)
 
-            pre_classify_data[gnews_id] = entry
+            pre_classify_data[oai_id] = openai_entry
 
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
-            # agregar title a la data y crear las existentes
-            Source.objects.filter(
-                main_url__in=new_foreign_sources, national__isnull=True).update(
-                national="For"
-            )
+            Source.objects\
+                .filter(main_url__in=new_foreign_sources,
+                        national__isnull=True)\
+                .update(pre_national="For")
 
         for entry in entries:
             gnews_id = entry.get("id")
-            if gnews_id in pre_classify_data:
-                entry["pre_is_dfi"] = pre_classify_data[gnews_id].get("is_dfi")
-                entry["source"]["is_foreign"] = pre_classify_data[
-                    gnews_id].get("source_is_foreign")
+            if not gnews_id:
+                continue
+
+            pre_classify_entry = pre_classify_data.get(gnews_id[:40], {})
+            if pre_classify_entry:
+                continue
+
+            entry["pre_is_dfi"] = pre_classify_entry.get("is_dfi")
+            entry["source"]["pre_national"] = pre_classify_entry\
+                .get("source_is_foreign")
 
         return entries
 
@@ -550,7 +561,7 @@ class NoteContent(models.Model):
     status_register_id = str | None
 
     def __str__(self):
-        return self.title
+        return self.title or self.link.title
 
     class Meta:
         verbose_name = 'Nota'
