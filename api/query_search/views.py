@@ -4,11 +4,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 # from urllib.parse import unquote
 from abc import ABC, abstractmethod
-from news.models import ApplyQuery, Link, SearchQuery, Note, Source
+from news.models import ApplyQuery, NoteLink, SearchQuery, NoteContent, Source
 from api.query_search.serializers import (
     ApplyQuerySerializer, SearchQuerySerializer, WhenSerializer)
 from api.note.serializers import (
-    LinkFullSerializer, LinkSerializer)
+    NoteLinkFullSerializer, NoteLinkSerializer)
 from api.catalogs.serializers import SourceSerializer
 from typing import Optional
 
@@ -16,6 +16,7 @@ from typing import Optional
 class SearchMixin:
 
     apply_query: Optional[ApplyQuery] = None
+    built_note_links: list = []
 
     @abstractmethod
     def get_search_query(self) -> SearchQuery:
@@ -25,28 +26,28 @@ class SearchMixin:
     def get_when_data(self):
         raise NotImplementedError
 
+    def get_link_serializer(self, link_instance):
+        if self.apply_query:
+            link_instance.queries.add(self.apply_query)
+        note_link_data = NoteLinkFullSerializer(link_instance).data
+        self.built_note_links.append(note_link_data)
+
     def search_data(self):
         from utils.date_time import parse_gmt_date_list
         search_query = self.get_search_query()
         when_data = self.get_when_data()
 
-        notes_data = search_query.search(**when_data)
-        search_entries = notes_data['entries']
+        links_data = search_query.search(**when_data)
+        search_entries = links_data['entries']
         print("search_entries ready")
-        built_links = []
+        self.built_note_links = []
 
         for entry in search_entries:
 
-            def get_link_serializer(link_instance):
-                if self.apply_query:
-                    link_instance.queries.add(self.apply_query)
-                serialized_link = LinkFullSerializer(link_instance).data
-                built_links.append(serialized_link)
-
             gnews_url = entry.pop('link')
-            link_obj = Link.objects.filter(gnews_url=gnews_url).first()
-            if link_obj:
-                get_link_serializer(link_obj)
+            note_link_obj = NoteLink.objects.filter(gnews_url=gnews_url).first()
+            if note_link_obj:
+                self.get_link_serializer(note_link_obj)
                 continue
 
             title = entry.pop('title')
@@ -72,10 +73,10 @@ class SearchMixin:
                     defaults={"name": source['title']}
                 )
                 pre_link['source'] = source_obj.id
-                link_serializer = LinkSerializer(data=pre_link)
-                link_serializer.is_valid(raise_exception=True)
-                link_obj = link_serializer.save()
-                get_link_serializer(link_obj)
+                note_link_serializer = NoteLinkSerializer(data=pre_link)
+                note_link_serializer.is_valid(raise_exception=True)
+                note_link_obj = note_link_serializer.save()
+                self.get_link_serializer(note_link_obj)
             else:
                 source_obj = Source.objects.filter(
                     main_url=source['href']).first()
@@ -87,13 +88,12 @@ class SearchMixin:
                         "name": source['title'],
                         "main_url": source['href'],
                     }
-                built_links.append(pre_link)
+                self.built_note_links.append(pre_link)
 
-        search_count = len(built_links)
         return {
-            'search_count': search_count,
-            'links': built_links,
-            'feed': notes_data.get('feed'),
+            'search_count': len(self.built_note_links),
+            'note_links': self.built_note_links,
+            'feed': links_data.get('feed'),
         }
 
 
@@ -148,6 +148,6 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
     def search(self, request, pk=None):
         self.apply_query = self.get_object()
         search_query_data = self.search_data()
-        for entry in search_query_data['links']:
+        for entry in search_query_data['note_links']:
             entry['apply_query'] = pk
         return Response(search_query_data)

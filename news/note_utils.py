@@ -1,8 +1,7 @@
-from news.models import Link, Note, SourceMethod, Source
-from api.catalogs.serializers import SourceSerializer
+from news.models import NoteLink, NoteContent, SourceMethod, Source
 from utils.open_ai import JsonRequestOpenAI
 from rest_framework.response import Response
-from api.note.serializers import NoteAndLinkSerializer, LinkFullSerializer
+from api.note.serializers import NoteLinkFullSerializer
 
 
 class HttpResponseError(Exception):
@@ -13,25 +12,25 @@ class HttpResponseError(Exception):
         self.errors = errors or []
         super().__init__()
 
-    def send_response(self, link_id: int):
+    def send_response(self, note_link_id: int):
         from rest_framework.response import Response
-        link_obj = Link.objects.get(pk=link_id)
-        base_response = LinkFullSerializer(link_obj).data
+        note_link_obj = NoteLink.objects.get(pk=note_link_id)
+        base_response = NoteLinkFullSerializer(note_link_obj).data
         if self.errors:
             base_response["errors"] = self.errors
         return Response(base_response, status=self.http_status)
 
 
-class NoteContent:
+class GetNoteContent:
 
-    def __init__(self, link: Link, source: Source = None):
+    def __init__(self, note_link: NoteLink, source: Source = None):
         self.first_response = None
         self.first_example = None
         self.prompt = None
-        self.link = link
-        self.real_url = link.real_url
+        self.note_link = note_link
+        self.real_url = note_link.real_url
         if not source:
-            source = link.source
+            source = note_link.source
         self.source = source
         self.full_html = None
         self.full_text = None
@@ -39,25 +38,25 @@ class NoteContent:
     def __call__(self):
         import traceback
         try:
-            return self.get_notes()
+            return self.get_content()
         except HttpResponseError as e:
-            return e.send_response(self.link.id)
+            return e.send_response(self.note_link.id)
         except Exception as e:
             error = f"Hubo un error: {e}"
             print(traceback.format_exc())
             return Response({"errors": [error]}, status=500)
 
-    def get_notes(self):
+    def get_content(self):
 
-        if self.link.is_dfi is False:
+        if self.note_link.is_dfi is False:
             raise HttpResponseError(http_status=200)
 
-        if not self.link.real_url:
+        if not self.note_link.real_url:
             error = "Se requiere una URL real para obtener el contenido"
             raise HttpResponseError(errors=[error])
 
-        saved_notes = Note.objects.filter(
-            link=self.link).select_related("link")
+        saved_notes = NoteContent.objects.filter(
+            note_link=self.note_link).select_related("note_link")
         if saved_notes.exists():
             raise HttpResponseError(http_status=200)
 
@@ -73,7 +72,7 @@ class NoteContent:
             error = "No se pudo obtener el contenido vía BeautifulSoup"
             raise HttpResponseError(errors=[error])
 
-        full_prompt = f"The title previously mentioned is: {self.link.title}\n"
+        full_prompt = f"The title previously mentioned is: {self.note_link.title}\n"
         full_prompt += self.full_html\
             .encode("utf-8", errors="ignore")\
             .decode("utf-8")
@@ -115,7 +114,7 @@ class NoteContent:
         if self.full_html:
             soup = BeautifulSoup(self.full_html, 'html.parser')
         else:
-            link_content = self.link.get_content()
+            link_content = self.note_link.get_content()
             if not link_content:
                 if forced_error:
                     error = "No se pudo obtener el contenido de la URL"
@@ -152,7 +151,7 @@ class NoteContent:
                 return pretty_final, final_text
             return None, None
 
-        title = self.link.title
+        title = self.note_link.title
         if not title:
             _, title = get_element_content('title')
         content_full, content = get_element_content('content')
@@ -166,11 +165,11 @@ class NoteContent:
         _, subtitle = get_element_content('subtitle')
         _, author = get_element_content('author')
 
-        final_note = Note.objects.create(
+        final_note = NoteContent.objects.create(
             title=title,
             content=content,
             content_full=content_full,
-            link=self.link,
+            note_link=self.note_link,
             source_method=source_method,
             source=self.source,
             subtitle=subtitle,
@@ -189,7 +188,7 @@ class NoteContent:
         soup = BeautifulSoup(response.content, "html.parser")
         body = soup.body
         body = body
-        title = self.link.title
+        title = self.note_link.title
         if title not in body.get_text():
             title = None
 

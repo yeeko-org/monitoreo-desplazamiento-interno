@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.urls import path
 
 from .models import (
-    Link, Note, SearchQuery, ApplyQuery, SourceMethod, Source,  WordList)
+    NoteLink, NoteContent, SearchQuery, ApplyQuery, SourceMethod, Source, WordList)
 
 
 @admin.register(Source)
@@ -46,7 +46,7 @@ class ApplyQueryAdmin(admin.ModelAdmin):
         results = obj.search_and_save_entries()
         messages.success(
             request, f"Se encontraron {results['total']} "
-            f"resultados, se crearon {results['created']} links")
+            f"resultados, se crearon {results['created']} Note Links")
 
 
 def apply_selected_method(modeladmin, request, queryset):
@@ -54,9 +54,9 @@ def apply_selected_method(modeladmin, request, queryset):
         selected_method_id = request.POST['source_method']
         selected_method = SourceMethod.objects.get(id=selected_method_id)
 
-        for link in queryset:
-            selected_method.note_by_link(link)
-            print(f'Aplicando {selected_method} a {link}')
+        for note_link in queryset:
+            selected_method.content_by_link(note_link)
+            print(f'Aplicando {selected_method} a {note_link}')
 
         modeladmin.message_user(request, "Método aplicado exitosamente")
         return redirect(request.get_full_path())
@@ -65,7 +65,7 @@ def apply_selected_method(modeladmin, request, queryset):
 
     return render(request, 'admin/apply_selected_method.html', context={
 
-        'links': queryset,
+        'note_links': queryset,
         'source_methods': SourceMethod.objects.all(),
         'action_checkbox_name': admin.helpers.ACTION_CHECKBOX_NAME,
     })
@@ -75,25 +75,25 @@ apply_selected_method.short_description = "Scrapear con método seleccionado"  #
 
 
 class NoteInline(admin.StackedInline):
-    model = Note
+    model = NoteContent
     extra = 0
     fields = ('title', 'subtitle', 'content', "source_method")
     readonly_fields = ('title', 'subtitle', 'content', "source_method")
 
 
-@admin.register(Link)
-class LinkAdmin(admin.ModelAdmin):
+@admin.register(NoteLink)
+class NoteLinkAdmin(admin.ModelAdmin):
     actions = [apply_selected_method]
-    list_display = ('url_display', 'title', 'source', "notes_count")
+    list_display = ('url_display', 'title', 'source', "note_links_count")
     list_filter = ('source',)
     search_fields = ('title', 'source')
     inlines = [NoteInline]
 
-    def url_display(self, obj: Link):
+    def url_display(self, obj: NoteLink):
         url = obj.real_url or obj.gnews_url
         return url[:50]
 
-    def notes_count(self, obj: Link):
+    def note_links_count(self, obj: NoteLink):
         return obj.notes.count()
 
     def get_urls(self):
@@ -107,7 +107,7 @@ class LinkAdmin(admin.ModelAdmin):
     def apply_selected_method_view(self, request):
         if request.method == 'POST':
             selected = request.POST.getlist(admin.helpers.ACTION_CHECKBOX_NAME)
-            queryset = Link.objects.filter(pk__in=selected)
+            queryset = NoteLink.objects.filter(pk__in=selected)
             return apply_selected_method(self, request, queryset)
         else:
             return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
@@ -118,7 +118,7 @@ class SourceMethodAdmin(admin.ModelAdmin):
     list_display = ('name', 'title_tag', 'subtitle_tag', 'content_tag')
 
 
-@admin.register(Note)
-class NoteAdmin(admin.ModelAdmin):
+@admin.register(NoteContent)
+class NoteContentAdmin(admin.ModelAdmin):
     list_display = ('title', 'subtitle', 'content')
-    raw_id_fields = ('link', 'source_method')
+    raw_id_fields = ('note_link', 'source_method')

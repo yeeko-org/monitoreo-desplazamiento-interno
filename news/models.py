@@ -183,20 +183,20 @@ class SearchQuery(models.Model):
             final_query = self.query
 
         if when:
-            notes_data = self.search_when(when, final_query)
+            links_data = self.search_when(when, final_query)
         elif from_date and to_date:
-            notes_data = self.search_from_to(from_date, to_date, final_query)
+            links_data = self.search_from_to(from_date, to_date, final_query)
         else:
             raise ValueError("No dates provided")
 
         entries = self.search_filter_soft(
-            notes_data.get("entries", []))
+            links_data.get("entries", []))
         # if not when:
         #     entries = self.pre_clasify_openai(entries)
 
         return {
             "entries": entries,
-            "feed": notes_data.get("feed")
+            "feed": links_data.get("feed")
         }
 
     def search_from_to(
@@ -205,7 +205,7 @@ class SearchQuery(models.Model):
 
         search_kwargs = {}
         range_dates = get_range_dates(None, from_date, to_date)
-        all_notes_data = []
+        all_links_data = []
         last_feed = None
         for from_date_r, to_date_r in range_dates:
 
@@ -214,12 +214,12 @@ class SearchQuery(models.Model):
 
             gn = YeekoGoogleNews("es", "MX")
             print("Searching...\n", search_query, "\n", search_kwargs)
-            notes_data = gn.search(search_query, helper=False, **search_kwargs)
-            all_notes_data.extend(notes_data.get("entries", []))
-            last_feed = notes_data.get("feed", None)
+            links_data = gn.search(search_query, helper=False, **search_kwargs)
+            all_links_data.extend(links_data.get("entries", []))
+            last_feed = links_data.get("feed", None)
 
         return {
-            "entries": all_notes_data,
+            "entries": all_links_data,
             "feed": last_feed
         }
 
@@ -272,9 +272,9 @@ class SearchQuery(models.Model):
             if gnews_source_url in foreign_sources:
                 continue
 
-            link = Link.objects.filter(gnews_url=gnews_url).first()
-            if link:
-                if link.is_dfi is not None or link.pre_is_dfi is not None:
+            note_link = NoteLink.objects.filter(gnews_url=gnews_url).first()
+            if note_link:
+                if note_link.is_dfi is not None or note_link.pre_is_dfi is not None:
                     continue
 
             entries_for_openai.append({
@@ -288,18 +288,18 @@ class SearchQuery(models.Model):
 
         full_prompt = json.dumps(entries_for_openai)
 
-        pre_clasify_request = JsonRequestOpenAI("news/prompt_pre_clasify.txt")
-        pre_clasify_response = pre_clasify_request.send_prompt(full_prompt)
-        if not pre_clasify_response:
+        pre_classify_request = JsonRequestOpenAI("news/prompt_pre_clasify.txt")
+        pre_classify_response = pre_classify_request.send_prompt(full_prompt)
+        if not pre_classify_response:
             return entries
 
         """
         title, id, source_url, source_title, is_dfi, source_is_foreign
         """
-        pre_clasify_data = {}
+        pre_classify_data = {}
         new_foreign_sources = []
-        pprint(pre_clasify_response)
-        articles = pre_clasify_response.get("articles", [])
+        pprint(pre_classify_response)
+        articles = pre_classify_response.get("articles", [])
         for entry in articles:
             print("Entry type:" + str(type(entry)))
             print(entry)
@@ -309,11 +309,11 @@ class SearchQuery(models.Model):
             gnews_source_title = entry.get("source_title")
             gnews_source_is_foreign = entry.get("source_is_foreign")
 
-            # Actualizacion automatica y/o creacion de fuente?
+            # Actualización automática y/o creación de fuente?
             if gnews_source_is_foreign:
                 new_foreign_sources.append(gnews_source_url)
 
-            pre_clasify_data[gnews_id] = entry
+            pre_classify_data[gnews_id] = entry
 
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
@@ -325,9 +325,9 @@ class SearchQuery(models.Model):
 
         for entry in entries:
             gnews_id = entry.get("id")
-            if gnews_id in pre_clasify_data:
-                entry["pre_is_dfi"] = pre_clasify_data[gnews_id].get("is_dfi")
-                entry["source"]["is_foreign"] = pre_clasify_data[
+            if gnews_id in pre_classify_data:
+                entry["pre_is_dfi"] = pre_classify_data[gnews_id].get("is_dfi")
+                entry["source"]["is_foreign"] = pre_classify_data[
                     gnews_id].get("source_is_foreign")
 
         return entries
@@ -349,14 +349,14 @@ class ApplyQuery(models.Model):
     to_date = models.DateField(blank=True, null=True)
 
     def search_and_save_entries(self):
-        notes_data = self.search_query.search(
+        links_data = self.search_query.search(
             None, self.from_date, self.to_date)
-        entries = notes_data.get("entries", [])
+        entries = links_data.get("entries", [])
 
         sources = {}
         created_count = 0
         for entry in entries:
-            link, is_created = self.save_entry(entry, sources)
+            note_link, is_created = self.save_entry(entry, sources)
             if is_created:
                 created_count += 1
 
@@ -377,7 +377,7 @@ class ApplyQuery(models.Model):
         else:
             source = sources[source_name]
 
-        link, is_created = Link.objects.get_or_create(
+        note_link, is_created = NoteLink.objects.get_or_create(
             gnews_url=entry.get("link"),
             defaults=dict(
                 title=entry.get("title"),
@@ -387,8 +387,8 @@ class ApplyQuery(models.Model):
                     entry.get("published_parsed"))
             )
         )
-        link.queries.add(self)
-        return link, is_created
+        note_link.queries.add(self)
+        return note_link, is_created
 
     def __str__(self):
         return self.search_query.name
@@ -398,30 +398,21 @@ class ApplyQuery(models.Model):
         verbose_name_plural = 'Aplicaciones de consulta'
 
 
-class Link(models.Model):
+class NoteLink(models.Model):
     gnews_url = models.URLField(max_length=800, unique=True)
     real_url = models.URLField(max_length=800, blank=True, null=True)
     title = models.CharField(max_length=200)
     # description = models.TextField()
     source = models.ForeignKey(
-        Source, on_delete=models.CASCADE, related_name='links')
+        Source, on_delete=models.CASCADE, related_name='note_links')
     published_at = models.DateTimeField(blank=True, null=True)
     queries = models.ManyToManyField(
-        ApplyQuery, related_name='links', blank=True)
+        ApplyQuery, related_name='note_links', blank=True)
     gnews_entry = models.JSONField(blank=True, null=True)
-    # {
-    #     "gnews_source": {
-    #         "title": "El Universal",
-    #         "href": "https://www.eluniversal.com.mx"
-    #     },
-    #     "gnews_id": "sadfsdfwerwrvdf",
-
-
-    # valid = models.BooleanField(blank=True, null=True)
     is_dfi = models.BooleanField(blank=True, null=True)
     pre_is_dfi = models.BooleanField(blank=True, null=True)
 
-    notes: models.QuerySet["Note"]
+    notes: models.QuerySet["NoteContent"]
 
     def __str__(self):
         return self.gnews_url[:30]
@@ -469,9 +460,9 @@ class SourceMethod(models.Model):
     # def _valid_source(self, source: Source):
     #     return self.sources.filter(pk=source.pk).exists()
 
-    def note_by_link(self, link: Link):
+    def content_by_link(self, note_link: NoteLink):
         from bs4 import BeautifulSoup
-        link_content = link.get_content()
+        link_content = note_link.get_content()
         if not link_content:
             return None
         soup = BeautifulSoup(link_content, 'html.parser')
@@ -495,13 +486,13 @@ class SourceMethod(models.Model):
         subtitle = get_text(self.subtitle_tag, soup)
         content = get_text(self.content_tag, soup)
 
-        return Note.objects.create(
-            link=link,
+        return NoteContent.objects.create(
+            note_link=note_link,
             title=title,
             subtitle=subtitle,
             content=content,
             source_method=self,
-            source=link.source
+            source=note_link.source
         )
 
     def __str__(self):
@@ -512,14 +503,14 @@ class SourceMethod(models.Model):
         verbose_name_plural = 'Métodos de fuente'
 
 
-class Note(models.Model):
+class NoteContent(models.Model):
     source = models.ForeignKey(
         Source, on_delete=models.CASCADE,
         verbose_name='Fuente de información')
-    link = models.ForeignKey(
-        Link, on_delete=models.CASCADE, related_name='notes')
+    note_link = models.ForeignKey(
+        NoteLink, on_delete=models.CASCADE, related_name='note_contents')
     source_method = models.ForeignKey(
-        SourceMethod, on_delete=models.CASCADE, related_name='notes',
+        SourceMethod, on_delete=models.CASCADE, related_name='note_contents',
         null=True, blank=True)
 
     # title = models.CharField(max_length=255)
@@ -561,7 +552,7 @@ def upload_to_note_file(instance, filename):
 
 class NoteFile(models.Model):
     note = models.ForeignKey(
-        Note, on_delete=models.CASCADE, related_name='files')
+        NoteContent, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to=upload_to_note_file, max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

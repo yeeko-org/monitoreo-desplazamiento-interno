@@ -14,4 +14,4 @@ def test_yeeko_gnews():
     #     "colombia", "gaza", "líbano", "israel", "hamas", "siria", "haití"]
     # search_kwargs = {"when": "2d", "negative_words": negatives}
     search_kwargs = {"when": "2d"}
-    notes = gn.search(final_query, helper=False, **search_kwargs)
+    links = gn.search(final_query, helper=False, **search_kwargs)

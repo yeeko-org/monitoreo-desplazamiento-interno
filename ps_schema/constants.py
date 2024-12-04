@@ -1,10 +1,10 @@
 all_collections = {
     "news": [
         {
-            "snake_name": "note",
-            "name": "Nota",
-            "plural_name": "Notas",
-            "model_name": "Note",
+            "snake_name": "note_content",
+            "name": "Contenido de Nota",
+            "plural_name": "Contenidos de Notas",
+            "model_name": "NoteContent",
             "level": "primary",
             "status_groups": ["register"],
             "color": 'deep-purple',
@@ -86,9 +86,9 @@ filter_groups = [
         "key_name": "sources",
         "name": "Fuente de información",
         "plural_name": "Fuentes de información",
-        "main_collection": "news-note",
+        "main_collection": "news-content_note",
         "filter_collections": [
-            "news-note",
+            "news-content_note"
         ],
         "category_subtype": "news-source",
     },
@@ -128,7 +128,7 @@ filter_groups = [
 collection_links = [
     {
         "parent": "news-source",
-        "child": "news-note",
+        "child": "news-content_note",
         "link_type": "category",
         "is_mandatory": True,
     },

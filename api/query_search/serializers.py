@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from api.note.serializers import LinkSerializer
-from news.models import Link, SearchQuery, ApplyQuery
+from api.note.serializers import NoteLinkSerializer
+from news.models import NoteLink, SearchQuery, ApplyQuery
 
 
 class ApplyQuerySerializer(serializers.ModelSerializer):
@@ -13,12 +13,12 @@ class ApplyQuerySerializer(serializers.ModelSerializer):
 
 class SearchQuerySerializer(serializers.ModelSerializer):
 
-    links = serializers.SerializerMethodField(read_only=True)
+    note_links = serializers.SerializerMethodField(read_only=True)
     apply_queries = ApplyQuerySerializer(many=True, read_only=True)
 
-    def get_links(self, obj):
-        return LinkSerializer(
-            Link.objects.filter(queries__search_query__id=obj.id),
+    def get_note_links(self, obj):
+        return NoteLinkSerializer(
+            NoteLink.objects.filter(queries__search_query__id=obj.id),
             many=True).data
 
     def create(self, validated_data):

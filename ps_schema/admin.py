@@ -55,13 +55,13 @@ class CollectionAdmin(admin.ModelAdmin):
                     f'● {target} <br>{space}({target.level.key_name})</a><br>')
             return html_list
 
-        html_list = ''
+        html_final = ''
         if parent_links := obj.parent_links.all():
-            html_list += f'<b>Parent Links:</b><br>{build_list(parent_links, "parent")}'
+            html_final += f'<b>Parent Links:</b><br>{build_list(parent_links, "parent")}'
         if child_links := obj.child_links.all():
-            html_list += f'<b>Child Links:</b><br>{build_list(child_links, "child")}'
+            html_final += f'<b>Child Links:</b><br>{build_list(child_links, "child")}'
         # model._meta.app_label
-        return format_html(html_list)
+        return format_html(html_final)
 
 
 @register(FilterGroup)

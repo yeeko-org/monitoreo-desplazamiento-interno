@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from news.models import Note
+from news.models import NoteContent
 
 
 class IsFullEditorOrReadOnly(BasePermission):
@@ -30,7 +30,7 @@ class IsAuthenticatedOrReadOnly(BasePermission):
 
 class ByStatusOrReadOnly(IsAuthenticatedOrReadOnly):
 
-    def has_object_permission(self, request, view, obj: Note):
+    def has_object_permission(self, request, view, obj: NoteContent):
         if request.method in SAFE_METHODS:
             return True
 

@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
-from news.models import Note, Link, SourceMethod, Source
+from news.models import NoteContent, NoteLink, SourceMethod, Source
 # from api.catalogs.serializers import SourceSerializer
 
 
-class BasicNoteSerializer(serializers.ModelSerializer):
+class BasicNoteContentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Note
+        model = NoteContent
         fields = "__all__"
 
 
@@ -16,24 +16,24 @@ class SourceSimpleSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class LinkFullSerializer(serializers.ModelSerializer):
-    notes = BasicNoteSerializer(many=True)
+class NoteLinkFullSerializer(serializers.ModelSerializer):
+    note_contents = BasicNoteContentSerializer(many=True)
     source = SourceSimpleSerializer()
 
     class Meta:
-        model = Link
+        model = NoteLink
         fields = "__all__"
 
 
-class LinkSerializer(serializers.ModelSerializer):
+class NoteLinkSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Link
+        model = NoteLink
         fields = "__all__"
 
 
-class LinkSimpleSerializer(serializers.ModelSerializer):
+class NoteLinkSimpleSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Link
+        model = NoteLink
         fields = ["pk", "real_url", "is_dfi"]
 
 
@@ -43,10 +43,6 @@ class SourceMethodSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class NoteAndLinkSerializer(BasicNoteSerializer):
-    # link_pk = serializers.ReadOnlyField(source='link.pk')
-    # link_real_url = serializers.ReadOnlyField(source='link.real_url')
-    # link_published_at = serializers.ReadOnlyField(source='link.published_at')
-    # link_valid = serializers.ReadOnlyField(source='link.valid')
-    link = LinkSerializer()
+class NoteLinkAndContentSerializer(BasicNoteContentSerializer):
+    note_link = NoteLinkSerializer()
     source_method = SourceMethodSerializer()

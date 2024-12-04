@@ -5,88 +5,40 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
 
-from api.note.serializers import NoteAndLinkSerializer, LinkSerializer
-from news.models import ApplyQuery, Link, Note, Source, SourceMethod
+from api.note.serializers import NoteLinkAndContentSerializer, NoteLinkSerializer
+from news.models import ApplyQuery, NoteLink, NoteContent, Source, SourceMethod
 from utils.open_ai import JsonRequestOpenAI
 
 
-class NoteContentView(views.APIView):
-
-    def post(self, request, *args, **kwargs):
-        from news.note_utils import NoteContent
-
-        data: dict = request.data
-
-        gnews_source = data.get("gnews_source")
-        source, source_created = Source.objects.get_or_create(
-            main_url=gnews_source.get("href"),
-            defaults={"name": gnews_source.get("title")},
-        )
-
-        link_valid = data.get("is_dfi")
-        if not isinstance(link_valid, bool):
-            link_valid = None
-
-        title = data.get("title")
-        real_url = data.get("real_url")
-        link, link_is_created = Link.objects.get_or_create(
-            gnews_url=data.get("gnews_url"),
-            defaults=dict(
-                real_url=real_url,
-                title=title,
-                source=source,
-                published_at=data.get("published_at"),
-                is_dfi=link_valid,
-            )
-        )
-
-        apply_query_id = data.get("apply_query_id")
-        if apply_query_id:
-            try:
-                query_origin = ApplyQuery.objects.get(pk=apply_query_id)
-                link.queries.add(query_origin)
-            except ApplyQuery.DoesNotExist:
-                pass
-
-        if not link_is_created:
-            link.is_dfi = link_valid
-            if real_url:
-                link.real_url = real_url
-            link.save()
-
-        note_content = NoteContent(link, source)
-        return note_content()
-
-
-class NoteViewSet(ModelViewSet):
-    queryset = Note.objects.all()
-    serializer_class = NoteAndLinkSerializer
+class NoteContentViewSet(ModelViewSet):
+    queryset = NoteContent.objects.all()
+    serializer_class = NoteLinkAndContentSerializer
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["get"])
     def additional_info(self, request, pk=None):
-        note = self.get_object()
+        note_content = self.get_object()
         note_open_ai = JsonRequestOpenAI('news/note_prompt.txt')
         try:
-            json_content = note_open_ai.send_prompt(note.content)
+            json_content = note_open_ai.send_prompt(note_content.content)
         except Exception:
             raise ValidationError("No se pudo extraer el contenido por OpenAI")
-        note.structured_content = json_content
-        note.save()
+        note_content.structured_content = json_content
+        note_content.save()
         return Response(json_content)
 
 
-class LinkViewSet(ModelViewSet):
-    queryset = Link.objects.all()
+class NoteLinkViewSet(ModelViewSet):
+    queryset = NoteLink.objects.all()
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["patch"])
     def get_note_content(self, request, pk=None):
-        from news.note_utils import NoteContent
+        from news.note_utils import GetNoteContent
 
-        serializer = LinkSerializer(data=request.data)
+        serializer = NoteLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_link = serializer.save()
 
-        note_content = NoteContent(new_link)
+        note_content = GetNoteContent(new_link)
         return note_content()
