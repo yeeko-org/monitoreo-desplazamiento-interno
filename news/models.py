@@ -1,7 +1,7 @@
 from datetime import date
 import json
 from pprint import pprint
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 from bs4 import BeautifulSoup
 import requests
 
@@ -316,7 +316,6 @@ class SearchQuery(models.Model):
             if openai_entry.get("source_is_foreign"):
                 new_foreign_sources.append(openai_entry.get("source_url"))
 
-
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
             Source.objects\
@@ -355,9 +354,10 @@ class ApplyQuery(models.Model):
     from_date = models.DateField(blank=True, null=True)
     to_date = models.DateField(blank=True, null=True)
     # LUCIAN: Nuevos campos, hay que guardarlo
-    # has_errors = models.BooleanField(default=False)
-    # errors = models.JSONField(blank=True, null=True)
-    # last_feed = models.JSONField(blank=True, null=True)
+
+    has_errors = models.BooleanField(default=False)
+    errors = models.JSONField(blank=True, null=True)
+    last_feed = models.JSONField(blank=True, null=True)
 
     def search_and_save_entries(self):
         links_data = self.search_query.search(
@@ -400,6 +400,20 @@ class ApplyQuery(models.Model):
         )
         note_link.queries.add(self)
         return note_link, is_created
+
+    def add_errors(self, errors: Union[str, List[str]]):
+        if isinstance(errors, str):
+            errors = [errors]
+
+        self.has_errors = True
+        if not self.errors:
+            self.errors = errors
+        elif isinstance(self.errors, list):
+            self.errors.extend(errors)
+        else:
+            self.errors = [self.errors] + errors
+
+        self.save()
 
     def __str__(self):
         return self.search_query.name
@@ -552,7 +566,7 @@ class NoteContent(models.Model):
     status_register_id = str | None
 
     def __str__(self):
-        return self.title or self.link.title
+        return self.title or self.note_link.title
 
     class Meta:
         verbose_name = 'Nota'

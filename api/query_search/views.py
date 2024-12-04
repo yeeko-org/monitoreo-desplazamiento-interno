@@ -1,3 +1,4 @@
+from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -39,13 +40,19 @@ class SearchMixin:
 
         links_data = search_query.search(**when_data)
         search_entries = links_data['entries']
+        feed = links_data.get('feed')
+        if feed and self.apply_query:
+            self.apply_query.last_feed = feed
+            self.apply_query.save()
+
         print("search_entries ready")
         self.built_note_links = []
 
         for entry in search_entries:
 
             gnews_url = entry.pop('link')
-            note_link_obj = NoteLink.objects.filter(gnews_url=gnews_url).first()
+            note_link_obj = NoteLink.objects.filter(
+                gnews_url=gnews_url).first()
             if note_link_obj:
                 self.get_link_serializer(note_link_obj)
                 continue
@@ -82,7 +89,7 @@ class SearchMixin:
                         "pre_national": pre_national,
                     }
                 )
-                pre_link['source'] = source_obj.id
+                pre_link['source'] = source_obj.pk
                 note_link_serializer = NoteLinkSerializer(data=pre_link)
                 note_link_serializer.is_valid(raise_exception=True)
                 note_link_obj = note_link_serializer.save()
@@ -159,7 +166,11 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
     @action(detail=True, methods=['get'])
     def search(self, request, pk=None):
         self.apply_query = self.get_object()
-        search_query_data = self.search_data()
+        try:
+            search_query_data = self.search_data()
+        except Exception as e:
+            self.apply_query.add_error(str(e))
+            raise ValidationError(str(e))
         for entry in search_query_data['note_links']:
             entry['apply_query'] = pk
         return Response(search_query_data)
