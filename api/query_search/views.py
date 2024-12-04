@@ -63,15 +63,25 @@ class SearchMixin:
                 pre_link['title'] = title
             published_parsed = entry.pop('published_parsed')
             published_at = parse_gmt_date_list(published_parsed)
-            published_at = published_at.strftime('%Y-%m-%d %H:%M:%S')
+            if published_at:
+                published_at = published_at.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                published_at = None
+
             pre_link["published_at"] = published_at
 
             if self.apply_query:
-                source_obj, _ = Source.objects.get_or_create(
+                pre_national = source.get('pre_national')
+                if pre_national not in ["Nal", "Int", "For"]:
+                    pre_national = None
+                source_obj, source_obj_created = Source.objects.get_or_create(
                     main_url=source['href'],
-                    defaults={"name": source['title']}
+                    defaults={
+                        "name": source['title'],
+                        "pre_national": pre_national,
+                    }
                 )
-                pre_link['source'] = source_obj.id
+                pre_link['source'] = source_obj.pk
                 link_serializer = LinkSerializer(data=pre_link)
                 link_serializer.is_valid(raise_exception=True)
                 link_obj = link_serializer.save()
@@ -117,7 +127,8 @@ class SearchQueryViewSet(SearchMixin, ModelViewSet):
         return self.get_object()
 
     def get_when_data(self):
-        when_serializer = self.get_serializer(data=self.request.data)
+        when_serializer = self.get_serializer(
+            data=self.request.data)  # type: ignore
 
         when_serializer.is_valid(raise_exception=True)
         return when_serializer.validated_data

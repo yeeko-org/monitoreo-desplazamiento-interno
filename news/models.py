@@ -37,6 +37,9 @@ class Source(models.Model):
     is_active = models.BooleanField(
         blank=True, null=True, verbose_name='Activa')
 
+    pre_national = models.CharField(
+        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+
     def __str__(self):
         return self.name
 
@@ -317,17 +320,16 @@ class SearchQuery(models.Model):
 
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
-            # agregar title a la data y crear las existentes
-            Source.objects.filter(
-                main_url__in=new_foreign_sources, national__isnull=True).update(
-                national="For"
-            )
+            Source.objects\
+                .filter(main_url__in=new_foreign_sources,
+                        national__isnull=True)\
+                .update(pre_national="For")
 
         for entry in entries:
             gnews_id = entry.get("id")
             if gnews_id in pre_clasify_data:
                 entry["pre_is_dfi"] = pre_clasify_data[gnews_id].get("is_dfi")
-                entry["source"]["is_foreign"] = pre_clasify_data[
+                entry["source"]["pre_national"] = pre_clasify_data[
                     gnews_id].get("source_is_foreign")
 
         return entries
@@ -415,7 +417,6 @@ class Link(models.Model):
     #         "href": "https://www.eluniversal.com.mx"
     #     },
     #     "gnews_id": "sadfsdfwerwrvdf",
-
 
     # valid = models.BooleanField(blank=True, null=True)
     is_dfi = models.BooleanField(blank=True, null=True)
@@ -548,7 +549,7 @@ class Note(models.Model):
     status_register_id = str | None
 
     def __str__(self):
-        return self.title
+        return self.title or self.link.title
 
     class Meta:
         verbose_name = 'Nota'
