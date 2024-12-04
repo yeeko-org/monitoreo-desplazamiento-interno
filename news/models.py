@@ -71,13 +71,18 @@ class WordList(models.Model):
     query_words = models.TextField(blank=True, null=True)
     soft_query_words = models.TextField(blank=True, null=True)
 
-    def get_all_words(self, enclose_sentences=True):
+    def get_all_words(self, enclose_sentences=True, include_soft=False):
         if not self.query_words:
             return []
         else:
             words = self.query_words.split(",")
 
-        standard_words = [word.strip() for word in words]
+        if include_soft and self.soft_query_words:
+            words.extend(self.soft_query_words.split(","))
+
+        words = list(set(words))
+
+        standard_words = [word.strip() for word in words if word.strip()]
         return [
             f'"{word}"' if " " in word and enclose_sentences else word
             for word in standard_words
@@ -244,7 +249,8 @@ class SearchQuery(models.Model):
         all_negative_words = []
         for word_list in self.negative_words.all():
             all_negative_words.extend(
-                word_list.get_all_words(enclose_sentences=False))
+                word_list.get_all_words(
+                    enclose_sentences=False, include_soft=True))
 
         all_negative_words = [
             word.strip().lower() for word in all_negative_words if word.strip()]
@@ -299,27 +305,17 @@ class SearchQuery(models.Model):
         """
         title, id, source_url, source_title, is_dfi, source_is_foreign
         """
-        pre_classify_data = {}
-        new_foreign_sources = []
-        openai_articles = pre_classify_response.get("articles", [])
 
-        for openai_entry in openai_articles:
+        new_foreign_sources = []
+
+        for oai_id in pre_classify_response:
+            openai_entry = pre_classify_response[oai_id]
             if not isinstance(openai_entry, dict):
                 continue
 
-            oai_id = openai_entry.get("id")
+            if openai_entry.get("source_is_foreign"):
+                new_foreign_sources.append(openai_entry.get("source_url"))
 
-            if not oai_id:
-                continue
-
-            gnews_source_url = openai_entry.get("source_url")
-            gnews_source_is_foreign = openai_entry.get("source_is_foreign")
-
-            # Actualización automática y/o creación de fuente?
-            if gnews_source_is_foreign:
-                new_foreign_sources.append(gnews_source_url)
-
-            pre_classify_data[oai_id] = openai_entry
 
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
@@ -333,12 +329,12 @@ class SearchQuery(models.Model):
             if not gnews_id:
                 continue
 
-            pre_classify_entry = pre_classify_data.get(gnews_id[:40], {})
-            if pre_classify_entry:
+            openai_entry = pre_classify_response.get(gnews_id[:40], {})
+            if not isinstance(openai_entry, dict):
                 continue
 
-            entry["pre_is_dfi"] = pre_classify_entry.get("is_dfi")
-            entry["source"]["pre_national"] = pre_classify_entry\
+            entry["pre_is_dfi"] = openai_entry.get("is_dfi")
+            entry["source"]["pre_national"] = openai_entry\
                 .get("source_is_foreign")
 
         return entries
