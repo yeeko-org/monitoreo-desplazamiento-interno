@@ -273,6 +273,15 @@ class Link(models.Model):
     published_at = models.DateTimeField(blank=True, null=True)
     queries = models.ManyToManyField(
         ApplyQuery, related_name='links', blank=True)
+    gnews_entry = models.JSONField(blank=True, null=True)
+    # {
+    #     "gnews_source": {
+    #         "title": "El Universal",
+    #         "href": "https://www.eluniversal.com.mx"
+    #     },
+    #     "gnews_id": "sadfsdfwerwrvdf",
+
+
     # valid = models.BooleanField(blank=True, null=True)
     is_dfi = models.BooleanField(blank=True, null=True)
 

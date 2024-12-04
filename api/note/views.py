@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
 
-from api.note.serializers import NoteAndLinkSerializer
+from api.note.serializers import NoteAndLinkSerializer, LinkFullSerializer
 from news.models import ApplyQuery, Link, Note, Source, SourceMethod
 from utils.open_ai import JsonRequestOpenAI
 
@@ -74,3 +74,24 @@ class NoteViewSet(ModelViewSet):
         note.structured_content = json_content
         note.save()
         return Response(json_content)
+
+
+class LinkViewSet(ModelViewSet):
+    queryset = Link.objects.all()
+    # serializer_class = NoteAndLinkSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        actions = {
+            "get_note_content": LinkFullSerializer,
+        }
+
+    @action(detail=True, methods=["post"])
+    def get_note_content(self, request, pk=None):
+        from news.note_utils import NoteContent
+        link = self.get_object()
+
+        serializer = self.get_serializer(data=request.data)
+
+        note_content = NoteContent(link)
+        return note_content()

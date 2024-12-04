@@ -2,20 +2,24 @@ from news.models import Link, Note, SourceMethod, Source
 from api.catalogs.serializers import SourceSerializer
 from utils.open_ai import JsonRequestOpenAI
 from rest_framework.response import Response
-from api.note.serializers import NoteAndLinkSerializer
+from api.note.serializers import NoteAndLinkSerializer, LinkFullSerializer
 
 
 class HttpResponseError(Exception):
 
-    def __init__(self, body_response=None, http_status=400):
-        self.body_response = body_response or {}
+    def __init__(
+            self, errors: list[str] = None, http_status: int = 400):
         self.http_status = http_status
-        self.errors = body_response.get("errors", [])
-        super().__init__(self.body_response)
+        self.errors = errors or []
+        super().__init__()
 
-    def send_response(self):
+    def send_response(self, link_id: int):
         from rest_framework.response import Response
-        return Response(self.body_response, status=self.http_status)
+        link_obj = Link.objects.get(pk=link_id)
+        base_response = LinkFullSerializer(link_obj).data
+        if self.errors:
+            base_response["errors"] = self.errors
+        return Response(base_response, status=self.http_status)
 
 
 class NoteContent:
@@ -32,20 +36,12 @@ class NoteContent:
         self.full_html = None
         self.full_text = None
 
-        self.response_data = {
-            "link": {
-                "is_dfi": link.is_dfi, "id": link.pk
-            },
-            "source": SourceSerializer(source).data
-        }
-
     def __call__(self):
         import traceback
         try:
             return self.get_notes()
         except HttpResponseError as e:
-            e.body_response.update(self.response_data)
-            return e.send_response()
+            return e.send_response(self.link.id)
         except Exception as e:
             error = f"Hubo un error: {e}"
             print(traceback.format_exc())
@@ -54,15 +50,16 @@ class NoteContent:
     def get_notes(self):
 
         if self.link.is_dfi is False:
-            raise HttpResponseError(self.response_data, http_status=200)
+            raise HttpResponseError(http_status=200)
 
         if not self.link.real_url:
             error = "Se requiere una URL real para obtener el contenido"
-            raise HttpResponseError({"errors": [error]})
+            raise HttpResponseError(errors=[error])
 
-        saved_notes = Note.objects.filter(link=self.link).select_related("link")
+        saved_notes = Note.objects.filter(
+            link=self.link).select_related("link")
         if saved_notes.exists():
-            self.send_notes(saved_notes)
+            raise HttpResponseError(http_status=200)
 
         source_methods = SourceMethod.objects.filter(
             source=self.source, tags__isnull=False)
@@ -74,7 +71,7 @@ class NoteContent:
         self.get_reduced_content_text(self.real_url)
         if not self.full_text:
             error = "No se pudo obtener el contenido vía BeautifulSoup"
-            raise HttpResponseError({"errors": [error]})
+            raise HttpResponseError(errors=[error])
 
         full_prompt = f"The title previously mentioned is: {self.link.title}\n"
         full_prompt += self.full_html\
@@ -86,35 +83,31 @@ class NoteContent:
         print("tags_content", tags_content)
         if not tags_content:
             error = "No se pudo obtener el contenido de las etiquetas"
-            raise HttpResponseError({"errors": [error]})
+            raise HttpResponseError(errors=[error])
         has_content = tags_content.get("has_content", None)
         if isinstance(has_content, bool):
-            self.source.has_content = has_content
-            self.source.is_active = has_content
-            self.source.save()
+            if self.source.has_content is None:
+                self.source.has_content = has_content
+                self.source.is_active = has_content
+            elif self.source.has_content is False and has_content:
+                self.source.has_content = has_content
+                self.source.is_active = has_content
         gpt_message = tags_content.get("message", None)
         if gpt_message and not self.source.scraper_message:
             self.source.scraper_message = gpt_message
-            self.source.save()
-        self.response_data["source"] = SourceSerializer(self.source).data
+        self.source.save()
         source_method = SourceMethod.objects.create(
             name=f"Tags {self.source.name}",
             source=self.source,
             tags=tags_content)
         if has_content is False:
             errors = [gpt_message, "No se encontró contenido en la URL"]
-            raise HttpResponseError({"errors": errors})
-        # self.link.source_method = source_method
+            raise HttpResponseError(errors=errors)
         self.get_note_by_method(
             source_method, forced_error=True)
 
         error = "Error desconocido"
-        raise HttpResponseError({"errors": [error]})
-
-    def send_notes(self, notes: list[Note]):
-        note_serializer = NoteAndLinkSerializer(notes, many=True)
-        self.response_data["notes"] = note_serializer.data
-        raise HttpResponseError(self.response_data, http_status=200)
+        raise HttpResponseError(errors=[error])
 
     def get_note_by_method(self, source_method: SourceMethod, forced_error=False):
         from bs4 import BeautifulSoup
@@ -126,7 +119,7 @@ class NoteContent:
             if not link_content:
                 if forced_error:
                     error = "No se pudo obtener el contenido de la URL"
-                    raise HttpResponseError({"errors": [error]})
+                    raise HttpResponseError(errors=[error])
                 return None
             soup = BeautifulSoup(link_content, 'html.parser')
 
@@ -167,7 +160,7 @@ class NoteContent:
             if forced_error:
                 error = "No se encontraron las etiquetas necesarias"
                 # print("soup final:", soup.prettify().encode("utf-8", errors="ignore"))
-                raise HttpResponseError({"errors": [error]})
+                raise HttpResponseError(errors=[error])
             return None
 
         _, subtitle = get_element_content('subtitle')
@@ -186,7 +179,7 @@ class NoteContent:
             full_text=self.full_text,
         )
 
-        self.send_notes([final_note])
+        raise HttpResponseError(http_status=200)
 
     def get_reduced_content_text(self, url: str):
         import requests
@@ -242,4 +235,3 @@ class NoteContent:
             raise e
         # new_html = body.prettify()
         self.full_text = body.get_text(separator="\n")
-        # return new_html, body.get_text(separator="\n")

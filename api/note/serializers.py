@@ -1,11 +1,21 @@
 from rest_framework import serializers
 
 from news.models import Note, Link, SourceMethod
+from api.catalogs.serializers import SourceSerializer
 
 
 class BasicNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Note
+        fields = "__all__"
+
+
+class LinkFullSerializer(serializers.ModelSerializer):
+    notes = BasicNoteSerializer(many=True)
+    source = SourceSerializer()
+
+    class Meta:
+        model = Link
         fields = "__all__"
 
 

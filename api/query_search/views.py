@@ -30,6 +30,7 @@ class SearchMixin:
         print("search_entries ready")
         exist_links_count = 0
         for entry in search_entries:
+            gnews_entry = entry
             gnews_url = entry.pop('link')
             entry['gnews_url'] = gnews_url
             entry['gnews_id'] = entry.pop('id')
