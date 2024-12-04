@@ -17,8 +17,8 @@ class SourceSimpleSerializer(serializers.ModelSerializer):
 
 
 class NoteLinkFullSerializer(serializers.ModelSerializer):
-    note_contents = BasicNoteContentSerializer(many=True)
-    source = SourceSimpleSerializer()
+    note_contents = BasicNoteContentSerializer(many=True, read_only=True)
+    source = SourceSimpleSerializer(read_only=True)
 
     class Meta:
         model = NoteLink

@@ -11,8 +11,9 @@ router = DefaultRouter()
 
 router.register('search_query', SearchQueryViewSet)
 router.register('apply_query', ApplyQueryViewSet)
+
 router.register('word_list', WordListViewSet)
-router.register('note', NoteContentViewSet)
+router.register('note_content', NoteContentViewSet)
 router.register('note_link', NoteLinkViewSet)
 urlpatterns = [
     path('login/', UserLoginAPIView.as_view(), name='login'),

@@ -1,4 +1,4 @@
-I have a jsson of a list of articles, each block of information has title, id, source_url and source_title, I want that for each block of data using the title, you determine if it falls into the topic of forced displacement within the same territory for Mexico, you will add a new field called "is_dfi", where true: it falls into the topic, null: you are not sure, false: it does not fall into the topic
+I have a json of a list of articles, each block of information has title, id, source_url and source_title, I want that for each block of data using the title, you determine if it falls into the topic of forced displacement within the same territory for Mexico, you will add a new field called "is_dfi", where true: it falls into the topic, null: you are not sure, false: it does not fall into the topic
 
 From the other fields, source_url and source_title, check if they are national sources ("Nal"), foreign ("For") or international ("Int"), where international are the newscasts that have a presence in a large part of the world such as BBC, add the field "source_is_foreign" with any of the options ["Nal", "For", "Int", null]
 
@@ -23,22 +23,12 @@ Return me the same Json with the added fields.
 ====
 
 {
-    "articles": [
-        {
-            "id": "CBMitgFBVV95cUxPcEpkWnFOUmp2cnR1a2xiZURi",
-            "source_url": "https://www.bbc.com/",
-            "source_title": "BBC News",
-            "title": "Mesa: Políticas migratorias en países receptores. Retos y oportunidades para atender los desplazamientos forzados y mixtos en una agenda global",
-            "is_dfi": true,
-            "source_is_foreign": "Int"
-        },
-        {
-            "id": "CBMi3AFBVV95cUxQcWRyRmF4WHNUNjhtSHVEYVFB",
-            "source_url": "https://diariocambio22.mx",
-            "source_title": "Diario Cambio 22",
-            "title": "Empresarios Ven Positivo que Trabajos de Mantenimiento de la Carretera Federal 307 se Realicen Durante Temporada Alta",
-            "is_dfi": false,
-            "source_is_foreign": "Nal"
-        }
-    ]
+    "CBMitgFBVV95cUxPcEpkWnFOUmp2cnR1a2xiZURi":{
+        "is_dfi": true,
+        "source_is_foreign": "Int"
+    },
+    "CBMi3AFBVV95cUxQcWRyRmF4WHNUNjhtSHVEYVFB": {
+        "is_dfi": false,
+        "source_is_foreign": "Nal"
+    }
 }

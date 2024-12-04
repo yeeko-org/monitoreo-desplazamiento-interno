@@ -64,9 +64,14 @@ class Cluster(models.Model):
 class WordList(models.Model):
     cluster = models.ForeignKey(
         Cluster, on_delete=models.CASCADE, related_name='words')
+    # LUCIAN: SE BORRARÁN
     main_word = models.CharField(max_length=100, unique=True)
     alternative_words = models.TextField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    # LUCIAN: NUEVOS CAMPOS:
+    # name = models.CharField(max_length=255)
+    # query_words = models.TextField(blank=True, null=True)
+    # soft_query_words = models.TextField(blank=True, null=True)
 
     def get_all_words(self, enclose_sentences=True):
         if not self.alternative_words:
@@ -347,6 +352,10 @@ class ApplyQuery(models.Model):
     # )
     from_date = models.DateField(blank=True, null=True)
     to_date = models.DateField(blank=True, null=True)
+    # LUCIAN: Nuevos campos, hay que guardarlo
+    # has_errors = models.BooleanField(default=False)
+    # errors = models.JSONField(blank=True, null=True)
+    # last_feed = models.JSONField(blank=True, null=True)
 
     def search_and_save_entries(self):
         links_data = self.search_query.search(
@@ -504,6 +513,7 @@ class SourceMethod(models.Model):
 
 
 class NoteContent(models.Model):
+    # Todo FUTURO: quitar:
     source = models.ForeignKey(
         Source, on_delete=models.CASCADE,
         verbose_name='Fuente de información')
@@ -514,6 +524,7 @@ class NoteContent(models.Model):
         null=True, blank=True)
 
     # title = models.CharField(max_length=255)
+    # Todo FUTURO: quitar:
     title = models.TextField(blank=True, null=True)
     author = models.CharField(max_length=255, blank=True, null=True)
     subtitle = models.CharField(

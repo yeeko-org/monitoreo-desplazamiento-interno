@@ -23,15 +23,14 @@ class HttpResponseError(Exception):
 
 class GetNoteContent:
 
-    def __init__(self, note_link: NoteLink, source: Source = None):
+    def __init__(self, note_link: NoteLink, source_method: SourceMethod = None):
         self.first_response = None
         self.first_example = None
         self.prompt = None
         self.note_link = note_link
         self.real_url = note_link.real_url
-        if not source:
-            source = note_link.source
-        self.source = source
+        self.source = note_link.source
+        self.source_method = source_method
         self.full_html = None
         self.full_text = None
 
@@ -60,11 +59,16 @@ class GetNoteContent:
         if saved_notes.exists():
             raise HttpResponseError(http_status=200)
 
-        source_methods = SourceMethod.objects.filter(
-            source=self.source, tags__isnull=False)
-        for source_method in source_methods:
-            self.get_note_by_method(source_method)
-        self.build_tags()
+        if self.source_method:
+            self.get_note_by_method(self.source_method)
+            error = "El source_method no pudo obtener el contenido"
+            raise HttpResponseError(errors=[error])
+        else:
+            source_methods = SourceMethod.objects.filter(
+                source=self.source, tags__isnull=False)
+            for source_method in source_methods:
+                self.get_note_by_method(source_method)
+            self.build_tags()
 
     def build_tags(self):
         self.get_reduced_content_text(self.real_url)
