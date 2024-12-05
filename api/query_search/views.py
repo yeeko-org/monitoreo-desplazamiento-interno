@@ -171,6 +171,7 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
         except Exception as e:
             self.apply_query.add_error(str(e))
             raise ValidationError(str(e))
+            # raise e # para debug
         for entry in search_query_data['note_links']:
             entry['apply_query'] = pk
         return Response(search_query_data)
