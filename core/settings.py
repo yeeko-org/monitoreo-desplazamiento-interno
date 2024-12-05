@@ -10,27 +10,87 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from utils.get_env import getenv_bool, getenv_int, getenv_list
+import os
+from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
-import os
-from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# -----------------------Default database configuration-----------------------
+POSTRGRESQL_DB = os.getenv('POSTRGRESQL_DB', False)
+DATABASE_NAME = os.getenv("DATABASE_NAME", "db.sqlite3")
+DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA")
+if POSTRGRESQL_DB:
+    default_database = {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': DATABASE_NAME,
+        'USER': os.getenv("DATABASE_USER"),
+        'PASSWORD': os.getenv("DATABASE_PASSWORD"),
+        'HOST': os.getenv("DATABASE_HOST"),
+        'PORT': int(os.getenv("DATABASE_PORT", 5432)),
+    }
+else:
+    default_database = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / DATABASE_NAME
+    }
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bywcb-()pkgcme-*kc)=@7a+%lvt2*16kt5i7s8iteqfv(cu#9'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if DATABASE_SCHEMA:
+    default_database['OPTIONS'] = {  # type: ignore
+        'options': f'-c search_path={DATABASE_SCHEMA}',
+    }
 
-CORS_ORIGIN_ALLOW_ALL = True
-ALLOWED_HOSTS = ["*"]
+DATABASES = {
+    "default": default_database
+}
+# ---------------------end Default database configuration---------------------
+
+
+# ---------------------------------SECURITY-----------------------------------
+
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-bywcb-()pkgcme-*kc)=@")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_TOKENS_MAX_LENGTH = getenv_int("OPENAI_TOKENS_MAX_LENGTH", 128000)
+OPENAI_ENGINE = os.getenv("OPENAI_ENGINE", "gpt-4o")
+
+
+ALLOWED_HOSTS = getenv_list("ALLOWED_HOSTS", ["*"])
+DEBUG = getenv_bool("DEBUG", True)
+
+_CSRF_TRUSTED_ORIGINS = getenv_list("CSRF_TRUSTED_ORIGINS")
+if _CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = _CSRF_TRUSTED_ORIGINS
+
+CORS_ORIGIN_ALLOW_ALL = getenv_bool("CORS_ORIGIN_ALLOW_ALL", True)
+USE_X_FORWARDED_HOST = getenv_bool("USE_X_FORWARDED_HOST", False)
+HTTP_X_FORWARDED_HOST = os.getenv("HTTP_X_FORWARDED_HOST")
+
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# -------------------------------END SECURITY---------------------------------
+
+
 AUTH_USER_MODEL = 'profile_auth.User'
 
 # Application definition
@@ -84,36 +144,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -154,5 +184,3 @@ REST_FRAMEWORK = {
     ],
 
 }
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
