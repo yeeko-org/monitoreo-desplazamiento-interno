@@ -125,8 +125,9 @@ class SearchQuery(models.Model):
     name = models.CharField(max_length=100)
 
     query = models.TextField(blank=True, null=True)
+    # soft_negative_words = models.TextField(blank=True, null=True)
     manual_query = models.TextField(blank=True, null=True)
-    use_manual_query = models.BooleanField(default=True)
+    use_manual_query = models.BooleanField(default=False)
 
     main_words = models.ManyToManyField(
         WordList, related_name='main_queries', blank=True)
@@ -390,10 +391,13 @@ class ApplyQuery(models.Model):
         source_name = entry.get("source", {}).get("title")
         if source_name not in sources:
             source_url = entry.get("source", {}).get("href")
-            source, _ = Source.objects.get_or_create(
-                name=source_name,
-                defaults={"main_url": source_url}
-            )
+            try:
+                source, _ = Source.objects.get_or_create(
+                    main_url=source_url,
+                    defaults={"name": source_name}
+                )
+            except Exception as e:
+                source = Source.objects.filter(main_url=source_url).first()
             sources[source_name] = source
         else:
             source = sources[source_name]
@@ -437,7 +441,7 @@ class ApplyQuery(models.Model):
 
 
 class NoteLink(models.Model):
-    gnews_url = models.URLField(max_length=800, unique=True)
+    gnews_url = models.URLField(max_length=1500, unique=True)
     real_url = models.URLField(max_length=800, blank=True, null=True)
     title = models.CharField(max_length=200)
     # description = models.TextField()
@@ -450,7 +454,7 @@ class NoteLink(models.Model):
     is_dfi = models.BooleanField(blank=True, null=True)
     pre_is_dfi = models.BooleanField(blank=True, null=True)
 
-    notes: models.QuerySet["NoteContent"]
+    note_contents: models.QuerySet["NoteContent"]
 
     def __str__(self):
         return self.gnews_url[:30]
