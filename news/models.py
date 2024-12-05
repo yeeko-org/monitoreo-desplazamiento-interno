@@ -204,7 +204,8 @@ class SearchQuery(models.Model):
 
         return {
             "entries": entries,
-            "feed": links_data.get("feed")
+            "feed": links_data.get("feed"),
+            "errors": links_data.get("errors") # type: ignore
         }
 
     def search_from_to(
@@ -215,6 +216,7 @@ class SearchQuery(models.Model):
         range_dates = get_range_dates(None, from_date, to_date)
         all_links_data = []
         last_feed = None
+        errors = []
         for from_date_r, to_date_r in range_dates:
 
             search_kwargs["from_"] = from_date_r.strftime("%Y-%m-%d")
@@ -222,13 +224,19 @@ class SearchQuery(models.Model):
 
             gn = YeekoGoogleNews("es", "MX")
             print("Searching...\n", search_query, "\n", search_kwargs)
-            links_data = gn.search(search_query, helper=False, **search_kwargs)
+            try:
+                links_data = gn.search(
+                    search_query, helper=False, **search_kwargs)
+            except Exception as e:
+                errors.append(str(e))
+                continue
             all_links_data.extend(links_data.get("entries", []))
             last_feed = links_data.get("feed", None)
 
         return {
             "entries": all_links_data,
-            "feed": last_feed
+            "feed": last_feed,
+            "errors": errors
         }
 
     def search_when(
@@ -401,7 +409,7 @@ class ApplyQuery(models.Model):
         note_link.queries.add(self)
         return note_link, is_created
 
-    def add_errors(self, errors: Union[str, List[str]]):
+    def add_errors(self, errors: Union[str, List[str]], save=True):
         if isinstance(errors, str):
             errors = [errors]
 
@@ -412,8 +420,11 @@ class ApplyQuery(models.Model):
             self.errors.extend(errors)
         else:
             self.errors = [self.errors] + errors
+        
+        self.errors = list(set(self.errors))
 
-        self.save()
+        if save:
+            self.save()
 
     def __str__(self):
         return self.search_query.name

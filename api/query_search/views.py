@@ -41,9 +41,20 @@ class SearchMixin:
         links_data = search_query.search(**when_data)
         search_entries = links_data['entries']
         feed = links_data.get('feed')
-        if feed and self.apply_query:
-            self.apply_query.last_feed = feed
-            self.apply_query.save()
+        errors = links_data.get('errors', [])
+
+        if self.apply_query:
+            save_apply_query = False
+            if feed:
+                self.apply_query.last_feed = feed
+                save_apply_query = True
+
+            if errors:
+                self.apply_query.add_errors(errors, save=False)
+                save_apply_query = True
+
+            if save_apply_query:
+                self.apply_query.save()
 
         print("search_entries ready")
         self.built_note_links = []
@@ -169,9 +180,9 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
         try:
             search_query_data = self.search_data()
         except Exception as e:
-            self.apply_query.add_error(str(e))
+            self.apply_query.add_errors(str(e))
             raise ValidationError(str(e))
-            # raise e # para debug
+            # raise e  # para debug
         for entry in search_query_data['note_links']:
             entry['apply_query'] = pk
         return Response(search_query_data)
