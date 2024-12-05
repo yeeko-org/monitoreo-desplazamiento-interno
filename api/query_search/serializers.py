@@ -11,6 +11,14 @@ class ApplyQuerySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ApplyQueryFullSerializer(serializers.ModelSerializer):
+    note_links = NoteLinkSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ApplyQuery
+        fields = '__all__'
+
+
 class SearchQuerySerializer(serializers.ModelSerializer):
 
     note_links = serializers.SerializerMethodField(read_only=True)

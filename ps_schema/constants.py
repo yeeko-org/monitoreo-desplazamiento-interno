@@ -1,16 +1,41 @@
 all_collections = {
     "news": [
         {
+            "snake_name": "search_query",
+            "name": "Consulta de palabras",
+            "plural_name": "Consultas de palabras",
+            "model_name": "SearchQuery",
+            "level": "primary",
+            "status_groups": ["register"],
+            "color": 'blue',
+            "icon": 'search',
+            "cat_params": {
+                "init_display": True,
+            },
+        },
+        {
             "snake_name": "note_content",
             "name": "Contenido de Nota",
             "plural_name": "Contenidos de Notas",
             "model_name": "NoteContent",
-            "level": "primary",
+            "level": "secondary",
             "status_groups": ["register"],
             "color": 'deep-purple',
-            "icon": 'newspaper',
+            "icon": 'article',
             "all_filters": [
-                {"filter_name": "source_types", "hidden": False},
+                {"filter_name": "sources", "hidden": False},
+            ],
+        },
+        {
+            "snake_name": "note_link",
+            "name": "Enlace de Nota",
+            "plural_name": "Enlaces de Notas",
+            "model_name": "NoteLink",
+            "level": "secondary",
+            "color": 'purple',
+            "icon": 'insert_link',
+            "all_filters": [
+                {"filter_name": "sources", "hidden": False},
             ],
         },
         {
@@ -19,6 +44,13 @@ all_collections = {
             "plural_name": "Fuentes de información",
             "model_name": "Source",
             "level": "category_subtype",
+        },
+        {
+            "snake_name": "apply_query",
+            "name": "Aplicación de Consulta",
+            "plural_name": "Aplicaciones de Consulta",
+            "model_name": "ApplyQuery",
+            "level": "relational",
         },
         {
             "snake_name": "cluster",
@@ -33,19 +65,6 @@ all_collections = {
             "plural_name": "Listas de palabras",
             "model_name": "WordList",
             "level": "category_subtype",
-        },
-        {
-            "snake_name": "search_query",
-            "name": "Consulta de palabras",
-            "plural_name": "Consultas de palabras",
-            "model_name": "SearchQuery",
-            "level": "primary",
-            "status_groups": ["register"],
-            "color": 'blue',
-            "icon": 'search',
-            "cat_params": {
-                "init_display": True,
-            },
         },
     ],
     "geo": [
@@ -86,9 +105,9 @@ filter_groups = [
         "key_name": "sources",
         "name": "Fuente de información",
         "plural_name": "Fuentes de información",
-        "main_collection": "news-content_note",
+        "main_collection": "news-note_link",
         "filter_collections": [
-            "news-content_note"
+            "news-note_link"
         ],
         "category_subtype": "news-source",
     },
@@ -98,47 +117,58 @@ filter_groups = [
         "plural_name": "Listas de palabras",
         "main_collection": "news-search_query",
         "filter_collections": [
-            "news-word_list",
+            "news-note_link",
         ],
         "category_type": "news-cluster",
         "category_subtype": "news-word_list",
         # "category_subtype": "news-cluster",
     },
-    {
-        "key_name": "states",
-        "name": "Estado",
-        "plural_name": "Estados",
-        "main_collection": "geo-location",
-        "category_subtype": "geo-state",
-    },
-    {
-        "key_name": "geographicals",
-        "name": "Geográficos",
-        "plural_name": "Geográficos",
-        "main_collection": "geo-location",
-        "filter_collections": [
-            "geo-location",
-        ],
-        "category_group": "geo-state",
-        "category_type": "geo-municipality",
-        "category_subtype": "geo-locality",
-    },
+    # {
+    #     "key_name": "states",
+    #     "name": "Estado",
+    #     "plural_name": "Estados",
+    #     "main_collection": "geo-location",
+    #     "category_subtype": "geo-state",
+    # },
+    # {
+    #     "key_name": "geographicals",
+    #     "name": "Geográficos",
+    #     "plural_name": "Geográficos",
+    #     "main_collection": "geo-location",
+    #     "filter_collections": [
+    #         "geo-location",
+    #     ],
+    #     "category_group": "geo-state",
+    #     "category_type": "geo-municipality",
+    #     "category_subtype": "geo-locality",
+    # },
 ]
 
 collection_links = [
     {
         "parent": "news-source",
-        "child": "news-content_note",
+        "child": "news-note_link",
         "link_type": "category",
         "is_mandatory": True,
     },
-    # {
-    #     "parent": "news-note",
-    #     "child": "news-mention",
-    #     "link_type": "relational",
-    #     "is_multiple": True,
-    #     "is_mandatory": True,
-    # },
+    {
+        "parent": "news-note_link",
+        "child": "news-note_content",
+        "link_type": "relational",
+        "is_mandatory": True,
+    },
+    {
+        "parent": "news-search_query",
+        "child": "news-apply_query",
+        "link_type": "relational",
+        "is_mandatory": True,
+    },
+    {
+        "parent": "news-apply_query",
+        "child": "news-note_link",
+        "link_type": "relational",
+        "is_mandatory": True,
+    },
     # {
     #     "parent": "news-mention",
     #     "child": "actor-participant",
@@ -159,20 +189,20 @@ collection_links = [
         "is_mandatory": True,
         "is_multiple": True,
     },
-    {
-        "parent": "geo-state",
-        "child": "geo-municipality",
-        "link_type": "grouper",
-        "filter_group": "geographicals",
-        "is_mandatory": True,
-    },
-    {
-        "parent": "geo-municipality",
-        "child": "geo-locality",
-        "link_type": "grouper",
-        "filter_group": "geographicals",
-        "is_mandatory": True,
-    },
+    # {
+    #     "parent": "geo-state",
+    #     "child": "geo-municipality",
+    #     "link_type": "grouper",
+    #     "filter_group": "geographicals",
+    #     "is_mandatory": True,
+    # },
+    # {
+    #     "parent": "geo-municipality",
+    #     "child": "geo-locality",
+    #     "link_type": "grouper",
+    #     "filter_group": "geographicals",
+    #     "is_mandatory": True,
+    # },
 ]
 
 

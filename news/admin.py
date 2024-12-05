@@ -94,7 +94,7 @@ class NoteLinkAdmin(admin.ModelAdmin):
         return url[:50]
 
     def note_links_count(self, obj: NoteLink):
-        return obj.notes.count()
+        return obj.note_contents.count()
 
     def get_urls(self):
         urls = super().get_urls()

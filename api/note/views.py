@@ -1,21 +1,43 @@
-from rest_framework import views, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
-
+from django_filters import FilterSet, DateFilter, CharFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from api.common_views import BaseViewSet
 from api.note.serializers import (
     NoteLinkAndContentSerializer, NoteLinkSerializer,
-    BasicNoteContentSerializer, NoteLinkFullSerializer)
+    BasicNoteContentSerializer, NoteLinkFullSerializer,
+    NoteLinkSpecialSerializer)
 from news.models import ApplyQuery, NoteLink, NoteContent, Source, SourceMethod
 from utils.open_ai import JsonRequestOpenAI
+from api.pagination import CustomPagination
+
+
+class NoteContentFilter(FilterSet):
+
+    # start_date = DateFilter(field_name='date', lookup_expr='gte')
+    # end_date = DateFilter(field_name='date', lookup_expr='lte')
+    status_register = CharFilter(field_name='status_register__name')
+
+    class Meta:
+        model = NoteContent
+        fields = {'source': ['exact']}
 
 
 class NoteContentViewSet(ModelViewSet):
     queryset = NoteContent.objects.all()
     serializer_class = NoteLinkAndContentSerializer
     permission_classes = [IsAuthenticated]
+
+    filterset_class = NoteContentFilter
+    pagination_class = CustomPagination
+    filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
+    search_fields = [
+        "title",
+    ]
 
     @action(detail=True, methods=["get"])
     def additional_info(self, request, pk=None):
@@ -29,18 +51,26 @@ class NoteContentViewSet(ModelViewSet):
         note_content.save()
         return Response(json_content)
 
-    def list(self, request):
-        # Todo LUCIAN: Filtrar según NoteLink.source
-        # y por rango de fechas (gte y lte) según NoteLink.published_at
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+
+class NoteLinkFilter(FilterSet):
+
+    start_date = DateFilter(field_name='date', lookup_expr='gte')
+    end_date = DateFilter(field_name='date', lookup_expr='lte')
+    status_register = CharFilter(field_name='status_register__name')
+
+    class Meta:
+        model = NoteLink
+        fields = {'source': ['exact']}
 
 
 class NoteLinkViewSet(ModelViewSet):
     queryset = NoteLink.objects.all()
     serializer_class = NoteLinkSerializer
     permission_classes = [IsAuthenticated]
+
+    filterset_class = NoteLinkFilter
+    pagination_class = CustomPagination
+    search_fields = ["title"]
 
     def get_serializer_class(self):
         actions = {
@@ -54,7 +84,9 @@ class NoteLinkViewSet(ModelViewSet):
     def get_note_content(self, request, pk=None):
         from news.note_utils import GetNoteContent
 
-        serializer = NoteLinkSerializer(data=request.data)
+        note_link = self.get_object()
+        serializer = NoteLinkSpecialSerializer(
+            note_link, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         new_link = serializer.save()
 
@@ -71,10 +103,3 @@ class NoteLinkViewSet(ModelViewSet):
         new_content = NoteLinkFullSerializer(note_link).data
 
         return Response(new_content)
-
-    def list(self, request):
-        # Todo LUCIAN: Recibir filtro de has_notes (Booleano)
-        # También un filtro is_dfi (Booleano)
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)

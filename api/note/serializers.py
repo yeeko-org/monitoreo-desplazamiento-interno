@@ -31,6 +31,16 @@ class NoteLinkSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class NoteLinkSpecialSerializer(serializers.ModelSerializer):
+    is_dfi = serializers.BooleanField(allow_null=True)
+
+    class Meta:
+        model = NoteLink
+        # read_only_fields = ["gnews_url", "source", "title"]
+        # exclude = ["gnews_url", "title"]
+        fields = "__all__"
+
+
 class NoteLinkSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = NoteLink

@@ -7,7 +7,8 @@ from rest_framework.response import Response
 from abc import ABC, abstractmethod
 from news.models import ApplyQuery, NoteLink, SearchQuery, NoteContent, Source
 from api.query_search.serializers import (
-    ApplyQuerySerializer, SearchQuerySerializer, WhenSerializer)
+    ApplyQuerySerializer, SearchQuerySerializer, WhenSerializer,
+    ApplyQueryFullSerializer)
 from api.note.serializers import (
     NoteLinkFullSerializer, NoteLinkSerializer)
 from api.catalogs.serializers import SourceSerializer
@@ -74,6 +75,7 @@ class SearchMixin:
             pre_link = {
                 "gnews_entry": entry,
                 "gnews_url": gnews_url,
+                "note_contents": [],
             }
             split = title.rsplit(' - ', 1)
             if len(split) == 2:
@@ -93,13 +95,17 @@ class SearchMixin:
                 pre_national = source.get('pre_national')
                 if pre_national not in ["Nal", "Int", "For"]:
                     pre_national = None
-                source_obj, source_obj_created = Source.objects.get_or_create(
-                    main_url=source['href'],
-                    defaults={
-                        "name": source['title'],
-                        "pre_national": pre_national,
-                    }
-                )
+                try:
+                    source_obj, source_obj_created = Source.objects.get_or_create(
+                        main_url=source['href'],
+                        defaults={
+                            "name": source['title'],
+                            "pre_national": pre_national,
+                        }
+                    )
+                except Exception as e:
+                    source_obj = Source.objects.filter(
+                        main_url=source['href']).first()
                 pre_link['source'] = source_obj.pk
                 note_link_serializer = NoteLinkSerializer(data=pre_link)
                 note_link_serializer.is_valid(raise_exception=True)
@@ -162,6 +168,13 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
     queryset = ApplyQuery.objects.all()
     serializer_class = ApplyQuerySerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):  # type: ignore
+        actions = {
+            "list": ApplyQuerySerializer,
+            "retrieve": ApplyQueryFullSerializer,
+        }
+        return actions.get(self.action, self.serializer_class)
 
     def get_search_query(self) -> SearchQuery:
         return self.get_object().search_query
