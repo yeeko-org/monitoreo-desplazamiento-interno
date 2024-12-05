@@ -12,6 +12,8 @@ from utils.yeeko_gnews import YeekoGoogleNews
 from category.models import StatusControl
 from utils.date_time import get_range_dates, parse_gmt_date_list
 
+REQUESTS_DEFAULT_HEADERS = {'User-Agent': 'Mozilla/4.0'}
+
 
 class Source(models.Model):
 
@@ -205,7 +207,7 @@ class SearchQuery(models.Model):
         return {
             "entries": entries,
             "feed": links_data.get("feed"),
-            "errors": links_data.get("errors") # type: ignore
+            "errors": links_data.get("errors")  # type: ignore
         }
 
     def search_from_to(
@@ -420,7 +422,7 @@ class ApplyQuery(models.Model):
             self.errors.extend(errors)
         else:
             self.errors = [self.errors] + errors
-        
+
         self.errors = list(set(self.errors))
 
         if save:
@@ -454,7 +456,8 @@ class NoteLink(models.Model):
         return self.gnews_url[:30]
 
     def get_response(self):
-        response = requests.get(self.real_url or self.gnews_url)
+        response = requests.get(
+            self.real_url or self.gnews_url, headers=REQUESTS_DEFAULT_HEADERS)
         if response.status_code == 200:
             if not self.real_url:
                 self.real_url = response.url
