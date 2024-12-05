@@ -23,6 +23,7 @@ class SearchQuerySerializer(serializers.ModelSerializer):
 
     note_links = serializers.SerializerMethodField(read_only=True)
     apply_queries = ApplyQuerySerializer(many=True, read_only=True)
+    query_words_soft = serializers.ReadOnlyField()
 
     def get_note_links(self, obj):
         return NoteLinkSerializer(
