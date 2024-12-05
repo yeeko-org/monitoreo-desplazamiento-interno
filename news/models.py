@@ -190,7 +190,9 @@ class SearchQuery(models.Model):
 
     @property
     def query_words_soft(self):
-        return self.get_query_words(include_soft=True)
+        return words_query_union(
+            self.negative_words.all(), union="",
+            funtion="get_negative_query", include_soft=True)
 
     def search(
             self, when: Optional[Any], from_date: Optional[date],
