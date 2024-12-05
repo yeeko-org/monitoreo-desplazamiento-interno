@@ -192,6 +192,8 @@ class GetNoteContent:
         # response.encoding = 'utf-8'
         soup = BeautifulSoup(response.content, "html.parser")
         body = soup.body
+        if not body:
+            return
         body = body
         title = self.note_link.title
         if title not in body.get_text():
