@@ -1,4 +1,5 @@
-from news.models import NoteLink, NoteContent, SourceMethod, Source
+from news.models import (
+    REQUESTS_DEFAULT_HEADERS, NoteLink, NoteContent, SourceMethod)
 from utils.open_ai import JsonRequestOpenAI
 from rest_framework.response import Response
 from api.note.serializers import NoteLinkFullSerializer
@@ -188,10 +189,12 @@ class GetNoteContent:
     def get_reduced_content_text(self, url: str):
         import requests
         from bs4 import BeautifulSoup
-        response = requests.get(url)
+        response = requests.get(url, headers=REQUESTS_DEFAULT_HEADERS)
         # response.encoding = 'utf-8'
         soup = BeautifulSoup(response.content, "html.parser")
         body = soup.body
+        if not body:
+            return
         body = body
         title = self.note_link.title
         if title not in body.get_text():

@@ -12,6 +12,8 @@ from utils.yeeko_gnews import YeekoGoogleNews
 from category.models import StatusControl
 from utils.date_time import get_range_dates, parse_gmt_date_list
 
+REQUESTS_DEFAULT_HEADERS = {'User-Agent': 'Mozilla/4.0'}
+
 
 class SourceOrigin(models.Model):
 
@@ -105,11 +107,12 @@ class WordList(models.Model):
             for word in standard_words
         ]
 
-    def get_or_query(self):
+    def get_or_query(self, include_soft=False):
         return " OR ".join(self.get_all_words())
 
-    def get_negative_query(self):
-        return " ".join([f"-{word}" for word in self.get_all_words()])
+    def get_negative_query(self, include_soft=False):
+        return " ".join([f"-{word}" for word in
+                         self.get_all_words(include_soft=include_soft)])
 
     def __str__(self):
         if not self.query_words:
@@ -127,13 +130,17 @@ class WordList(models.Model):
         ordering = ['cluster', 'name']
 
 
-def words_query_union(words_query, union="OR", funtion="get_or_query"):
+def words_query_union(
+        words_query, union="OR", funtion="get_or_query", include_soft=False):
+    if funtion not in ["get_or_query", "get_negative_query"]:
+        raise ValueError("Invalid function")
     if not union:
         union = " "
     else:
         union = f" {union} "
     return union.join(
-        [getattr(word_list, funtion)() for word_list in words_query])
+        [getattr(word_list, funtion)(include_soft=include_soft)
+         for word_list in words_query])
 
 
 class SearchQuery(models.Model):
@@ -168,8 +175,7 @@ class SearchQuery(models.Model):
 
         return super().save(*args, **kwargs)
 
-    def query_words(self):
-        print("Querying words")
+    def get_query_words(self, include_soft=False):
         main_query = words_query_union(self.main_words.all())
         if not main_query:
             return
@@ -178,21 +184,32 @@ class SearchQuery(models.Model):
             self.complementary_words.all())
         negative_terms = words_query_union(
             self.negative_words.all(), union="",
-            funtion="get_negative_query")
+            funtion="get_negative_query", include_soft=include_soft)
 
         if complementary_query or negative_terms:
-            self.query = f"({main_query})"
+            query = f"({main_query})"
         else:
-            self.query = main_query
-            return
+            return main_query
 
         if complementary_query:
-            self.query += f" AND ({complementary_query})"
+            query += f" AND ({complementary_query})"
 
-        self.query += "{{DATE}}"
+        query += "{{DATE}}"
 
         if negative_terms:
-            self.query += f" {negative_terms}"
+            query += f" {negative_terms}"
+        
+        return query
+
+    def query_words(self):
+        print("Querying words")
+        self.query = self.get_query_words()
+
+    @property
+    def query_words_soft(self):
+        return words_query_union(
+            self.negative_words.all(), union="",
+            funtion="get_negative_query", include_soft=True)
 
     def search(
             self, when: Optional[Any], from_date: Optional[date],
@@ -223,7 +240,7 @@ class SearchQuery(models.Model):
         return {
             "entries": entries,
             "feed": links_data.get("feed"),
-            "errors": links_data.get("errors") # type: ignore
+            "errors": links_data.get("errors")  # type: ignore
         }
 
     def search_from_to(
@@ -444,7 +461,7 @@ class ApplyQuery(models.Model):
             self.errors.extend(errors)
         else:
             self.errors = [self.errors] + errors
-        
+
         self.errors = list(set(self.errors))
 
         if save:
@@ -487,7 +504,8 @@ class NoteLink(models.Model):
         return self.gnews_url[:30]
 
     def get_response(self):
-        response = requests.get(self.real_url or self.gnews_url)
+        response = requests.get(
+            self.real_url or self.gnews_url, headers=REQUESTS_DEFAULT_HEADERS)
         if response.status_code == 200:
             if not self.real_url:
                 self.real_url = response.url
