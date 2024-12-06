@@ -47,7 +47,8 @@ class GetNoteContent:
 
     def get_content(self):
 
-        if self.note_link.is_dfi is False:
+        # if self.note_link.is_dfi is False:
+        if self.note_link.is_internal_dis == 'invalid':
             raise HttpResponseError(http_status=200)
 
         if not self.note_link.real_url:

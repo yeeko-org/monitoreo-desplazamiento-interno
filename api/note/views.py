@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
-from django_filters import FilterSet, DateFilter, CharFilter
+from django_filters import FilterSet, DateFilter, CharFilter, NumberFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from api.common_views import BaseViewSet
@@ -42,14 +42,20 @@ class NoteContentViewSet(ModelViewSet):
     @action(detail=True, methods=["get"])
     def additional_info(self, request, pk=None):
         note_content = self.get_object()
-        note_open_ai = JsonRequestOpenAI('news/note_prompt.txt')
+        note_open_ai = JsonRequestOpenAI(
+            'news/structure_prompt.txt', to_json=False)
         try:
-            json_content = note_open_ai.send_prompt(note_content.content)
-        except Exception:
+            subtitle = note_content.subtitle
+            date = note_content.note_link.published_at
+            full_content = (f"{note_content.title}\n{subtitle} ({date})"
+                            f"\n\n{note_content.content}")
+            text_content = note_open_ai.send_prompt(full_content)
+        except Exception as e:
+            print("Error en la extracción de contenido", e)
             raise ValidationError("No se pudo extraer el contenido por OpenAI")
-        note_content.structured_content = json_content
+        note_content.structured_content = text_content
         note_content.save()
-        return Response(json_content)
+        return Response({"structured_content": text_content})
 
 
 class NoteLinkFilter(FilterSet):
@@ -57,6 +63,8 @@ class NoteLinkFilter(FilterSet):
     start_date = DateFilter(field_name='date', lookup_expr='gte')
     end_date = DateFilter(field_name='date', lookup_expr='lte')
     status_register = CharFilter(field_name='status_register__name')
+    source_origin = NumberFilter(
+        field_name='source__source_origin', lookup_expr='exact')
 
     class Meta:
         model = NoteLink
@@ -69,13 +77,14 @@ class NoteLinkViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     filterset_class = NoteLinkFilter
+    filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
     pagination_class = CustomPagination
     search_fields = ["title"]
 
     def get_serializer_class(self):
         actions = {
             "list": NoteLinkSerializer,
-            "create": NoteLinkFullSerializer,
+            "retrieve": NoteLinkFullSerializer,
             "manual_create_note_content": NoteLinkFullSerializer,
         }
         return actions.get(self.action, self.serializer_class)

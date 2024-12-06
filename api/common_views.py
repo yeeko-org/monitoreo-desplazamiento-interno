@@ -6,8 +6,7 @@ from api.pagination import CustomPagination
 
 
 class BaseViewSet(viewsets.ModelViewSet):
-    # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     # filterset_class = FilterSet
     pagination_class = CustomPagination
     filter_backends = [SearchFilter, DjangoFilterBackend]

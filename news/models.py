@@ -13,6 +13,23 @@ from category.models import StatusControl
 from utils.date_time import get_range_dates, parse_gmt_date_list
 
 
+class SourceOrigin(models.Model):
+
+    name = models.CharField(max_length=100)
+    old_name = models.CharField(max_length=100, blank=True, null=True)
+    color = models.CharField(max_length=20, blank=True, null=True)
+    order = models.SmallIntegerField(default=5)
+    in_scope = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Origen de fuente (National)'
+        verbose_name_plural = 'Orígenes de fuente (National)'
+
+
 class Source(models.Model):
 
     NATIONAL_CHOICES = [
@@ -21,30 +38,30 @@ class Source(models.Model):
         ('For', 'Extranjera'),
     ]
 
+    source_origin = models.ForeignKey(
+        SourceOrigin, on_delete=models.CASCADE,
+        related_name='sources', default=1)
     name = models.CharField(max_length=100)
-    is_news = models.BooleanField(
-        default=True, verbose_name='Es una fuente de noticias')
     main_url = models.CharField(max_length=100, blank=True, null=True)
-    order = models.SmallIntegerField(default=5)
-    # exclude = models.BooleanField(default=False)
-    scraper_message = models.TextField(blank=True, null=True)
-    # is_foreign = models.BooleanField(
-    #     default=False, verbose_name='Es extranjera no internacional')
-    national = models.CharField(
-        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
     has_content = models.BooleanField(
         blank=True, null=True, verbose_name='Es scrapeable')
+    scraper_message = models.TextField(blank=True, null=True)
+    national = models.CharField(
+        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
     is_active = models.BooleanField(
         blank=True, null=True, verbose_name='Activa')
 
     pre_national = models.CharField(
         choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+    pre_source_origin = models.ForeignKey(
+        SourceOrigin, on_delete=models.CASCADE, blank=True, null=True,
+        related_name='pre_sources')
 
     def __str__(self):
         return self.name
 
     class Meta:
-        ordering = ['order']
+        ordering = ['name']
         verbose_name = 'Fuente de información'
         verbose_name_plural = 'Fuentes de información'
 
@@ -279,8 +296,9 @@ class SearchQuery(models.Model):
     def pre_clasify_openai(self, entries: List[dict]):
 
         entries_for_openai = []
-        foreign_sources = Source.objects.filter(national="For").values_list(
-            "main_url", flat=True)
+        foreign_sources = Source.objects\
+            .filter(source_origin__name="Extranjera")\
+            .values_list("main_url", flat=True)
         for openai_entry in entries:
             title = openai_entry.get("title")
             gnews_id = openai_entry.get("id", "")
@@ -292,7 +310,8 @@ class SearchQuery(models.Model):
 
             note_link = NoteLink.objects.filter(gnews_url=gnews_url).first()
             if note_link:
-                if note_link.is_dfi is not None or note_link.pre_is_dfi is not None:
+                # if note_link.is_dfi is not None or note_link.pre_is_dfi is not None:
+                if note_link.is_internal_dis or note_link.pre_is_dfi is not None:
                     continue
 
             entries_for_openai.append({
@@ -327,10 +346,11 @@ class SearchQuery(models.Model):
 
         if new_foreign_sources:
             new_foreign_sources = list(set(new_foreign_sources))
+            foreign = SourceOrigin.objects.get(name="Extranjera")
             Source.objects\
                 .filter(main_url__in=new_foreign_sources,
-                        national__isnull=True)\
-                .update(pre_national="For")
+                        source_origin__isnull=True)\
+                .update(pre_source_origin=foreign)
 
         for entry in entries:
             gnews_id = entry.get("id")
@@ -439,9 +459,16 @@ class ApplyQuery(models.Model):
 
 
 class NoteLink(models.Model):
+
+    INTERNAL_DIS_CHOICES = [
+        ('valid', 'Válido'),
+        ('invalid', 'Inválido'),
+        ('unknown', 'Desconocido'),
+    ]
+
     gnews_url = models.URLField(max_length=1500, unique=True)
     real_url = models.URLField(max_length=800, blank=True, null=True)
-    title = models.CharField(max_length=200)
+    title = models.TextField()
     # description = models.TextField()
     source = models.ForeignKey(
         Source, on_delete=models.CASCADE, related_name='note_links')
@@ -450,6 +477,8 @@ class NoteLink(models.Model):
         ApplyQuery, related_name='note_links', blank=True)
     gnews_entry = models.JSONField(blank=True, null=True)
     is_dfi = models.BooleanField(blank=True, null=True)
+    is_internal_dis = models.CharField(
+        choices=INTERNAL_DIS_CHOICES, max_length=10, blank=True, null=True)
     pre_is_dfi = models.BooleanField(blank=True, null=True)
 
     note_contents: models.QuerySet["NoteContent"]
@@ -569,7 +598,8 @@ class NoteContent(models.Model):
     full_html = models.TextField(blank=True, null=True)
     full_text = models.TextField(blank=True, null=True)
 
-    structured_content = models.JSONField(blank=True, null=True)
+    # structured_content = models.JSONField(blank=True, null=True)
+    structured_content = models.TextField(blank=True, null=True)
 
     status_register = models.ForeignKey(
         StatusControl, on_delete=models.CASCADE, blank=True, null=True)

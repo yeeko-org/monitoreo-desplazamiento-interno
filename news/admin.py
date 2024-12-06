@@ -9,8 +9,7 @@ from .models import (
 
 @admin.register(Source)
 class SourceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'is_news', 'main_url', 'order')
-    list_editable = ('order',)
+    list_display = ('name', 'main_url',)
 
 
 @admin.register(WordList)

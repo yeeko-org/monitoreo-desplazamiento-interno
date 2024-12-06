@@ -32,7 +32,7 @@ class NoteLinkSerializer(serializers.ModelSerializer):
 
 
 class NoteLinkSpecialSerializer(serializers.ModelSerializer):
-    is_dfi = serializers.BooleanField(allow_null=True)
+    # is_dfi = serializers.BooleanField(allow_null=True)
 
     class Meta:
         model = NoteLink
@@ -44,7 +44,7 @@ class NoteLinkSpecialSerializer(serializers.ModelSerializer):
 class NoteLinkSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = NoteLink
-        fields = ["pk", "real_url", "is_dfi"]
+        fields = ["pk", "real_url", "is_dfi", "is_internal_dis"]
 
 
 class SourceMethodSerializer(serializers.ModelSerializer):

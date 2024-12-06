@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from news.models import Source, Cluster
+from news.models import Source, Cluster, SourceOrigin
 from category.models import StatusControl
-
+from api.note.serializers import NoteLinkSerializer
 from ps_schema.models import (Level, Collection, CollectionLink, FilterGroup)
 
 
@@ -12,7 +12,32 @@ class StatusControlSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class SourceOriginSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SourceOrigin
+        fields = "__all__"
+
+
 class SourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Source
+        fields = "__all__"
+
+
+class SourceCountSerializer(serializers.ModelSerializer):
+    note_links_count = serializers.SerializerMethodField()
+
+    def get_note_links_count(self, obj):
+        return obj.note_links.count()
+
+    class Meta:
+        model = Source
+        fields = "__all__"
+
+
+class SourceFullSerializer(serializers.ModelSerializer):
+    note_links = NoteLinkSerializer(many=True, read_only=True)
+
     class Meta:
         model = Source
         fields = "__all__"

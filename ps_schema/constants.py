@@ -39,6 +39,13 @@ all_collections = {
             ],
         },
         {
+            "snake_name": "source_origin",
+            "name": "Origen de fuente",
+            "plural_name": "Orígenes de fuentes",
+            "model_name": "SourceOrigin",
+            "level": "category_type",
+        },
+        {
             "snake_name": "source",
             "name": "Fuente de información",
             "plural_name": "Fuentes de información",
@@ -109,6 +116,7 @@ filter_groups = [
         "filter_collections": [
             "news-note_link"
         ],
+        "category_type": "news-source_origin",
         "category_subtype": "news-source",
     },
     {
@@ -145,6 +153,11 @@ filter_groups = [
 ]
 
 collection_links = [
+    {
+        "parent": "news-source_origin",
+        "child": "news-source",
+        "link_type": "grouper",
+    },
     {
         "parent": "news-source",
         "child": "news-note_link",

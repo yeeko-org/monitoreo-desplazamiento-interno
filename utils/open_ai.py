@@ -27,12 +27,13 @@ class JsonRequestOpenAI:
     first_response: dict
     prompt: str
 
-    def __init__(self, prompt_path: str):
+    def __init__(self, prompt_path: str, to_json: bool = True):
         openai_api_key = getattr(settings, 'OPENAI_API_KEY', None)
 
         self.client = openai.OpenAI(api_key=openai_api_key)
         self.engine = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o')
         self.messages: list[dict] = []
+        self.to_json = to_json
         with open(prompt_path, "r", encoding="utf-8") as file:
             init_prompt = file.read()
         msgs = init_prompt.split("\n====\n")
@@ -44,15 +45,16 @@ class JsonRequestOpenAI:
         self.first_response = {}
         self.prompt = ""
 
-    def send_prompt(self, new_prompt) -> Optional[dict]:
+    def send_prompt(self, new_prompt):
         if not new_prompt:
             return None
         self.build_msg(new_prompt, "user")
-
+        response_format = {"type": "json_object"} \
+            if self.to_json else None
         try:
             response = self.client.chat.completions.create(
                 model=self.engine,
-                response_format={"type": "json_object"},
+                response_format=response_format,
                 messages=self.messages,
                 temperature=0.6,
                 max_tokens=16000,
@@ -65,13 +67,16 @@ class JsonRequestOpenAI:
             print(f"OpenAI BadRequestError: {e}")
             raise e
 
-        json_response = response.choices[0].message.content
-        if not json_response:
-            return None
-        try:
-            return json.loads(json_response)
-        except Exception:
-            return None
+        if self.to_json:
+            json_response = response.choices[0].message.content
+            if not json_response:
+                return None
+            try:
+                return json.loads(json_response)
+            except Exception:
+                return None
+        else:
+            return response.choices[0].message.content
 
     def build_msg(self, prompt, role="user"):
         # print("-"*50)

@@ -14,8 +14,9 @@ from api.catalogs.serializers import (
     CollectionSerializer,
     CollectionLinkSerializer,
     FilterGroupSerializer,
+    SourceOriginSerializer,
 )
-from news.models import Source, Cluster, SearchQuery, WordList
+from news.models import Source, Cluster, SearchQuery, WordList, SourceOrigin
 from api.geo.serializers import StateListSerializer
 from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
 
@@ -41,6 +42,8 @@ class CatalogsView(APIView):
 
             "sources": SourceSerializer(
                 Source.objects.all(), many=True).data,
+            "source_origins": SourceOriginSerializer(
+                SourceOrigin.objects.all(), many=True).data,
             "clusters": ClusterSerializer(
                 Cluster.objects.all(), many=True).data,
 

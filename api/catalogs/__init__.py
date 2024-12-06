@@ -3,13 +3,17 @@ from rest_framework import viewsets, permissions
 from django.db.models import Count
 # from rest_framework.decorators import action
 # from rest_framework.response import Response
+from api.common_views import BaseViewSet
 
 # from source.models import Source
-from news.models import Source, Cluster
+from news.models import Source, Cluster, SourceOrigin
 from category.models import StatusControl
 
 from api.catalogs.serializers import (
     SourceSerializer,
+    SourceFullSerializer,
+    SourceCountSerializer,
+    SourceOriginSerializer,
     StatusControlSerializer,
     ClusterSerializer,
 )
@@ -18,10 +22,23 @@ from .all import CatalogsView  # noqa
 # from ..space_time import ListSetMixin
 
 
-class SourceViewSet(viewsets.ModelViewSet):
+class SourceOriginViewSet(BaseViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Source.objects.all()
-    serializer_class = SourceSerializer
+    queryset = SourceOrigin.objects.all()
+    serializer_class = SourceOriginSerializer
+
+
+class SourceViewSet(BaseViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Source.objects.all()\
+        .prefetch_related('note_links')
+    serializer_class = SourceCountSerializer
+
+    def get_serializer_class(self):
+        action_serializer = {
+            'retrieve': SourceFullSerializer,
+        }
+        return action_serializer.get(self.action, self.serializer_class)
 
 
 class StatusControlViewSet(viewsets.ModelViewSet):
