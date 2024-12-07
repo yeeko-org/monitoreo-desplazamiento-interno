@@ -5,7 +5,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 # from urllib.parse import unquote
 from abc import ABC, abstractmethod
-from news.models import ApplyQuery, NoteLink, SearchQuery, NoteContent, Source
+from source.models import Source
+from search.models import ApplyQuery, SearchQuery
+from note.models import NoteLink
 from api.query_search.serializers import (
     ApplyQuerySerializer, SearchQuerySerializer, WhenSerializer,
     ApplyQueryFullSerializer)

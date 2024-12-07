@@ -2,7 +2,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from api.words.serializers import WordListSerializer
-from news.models import WordList
+from search.models import WordList
 
 
 class WordListViewSet(ModelViewSet):

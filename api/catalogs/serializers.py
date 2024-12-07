@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from news.models import Source, Cluster, SourceOrigin
+from source.models import Source, SourceOrigin
+from search.models import Cluster
 from category.models import StatusControl
 from api.note.serializers import NoteLinkSerializer
 from ps_schema.models import (Level, Collection, CollectionLink, FilterGroup)
@@ -71,4 +72,3 @@ class FilterGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = FilterGroup
         fields = "__all__"
-

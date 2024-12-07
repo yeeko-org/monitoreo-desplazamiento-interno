@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from news.models import NoteContent, NoteLink, SourceMethod, Source
+from source.models import Source, SourceMethod
+from note.models import NoteContent, NoteLink
 # from api.catalogs.serializers import SourceSerializer
 
 

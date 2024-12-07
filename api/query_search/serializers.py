@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from api.note.serializers import NoteLinkSerializer
-from news.models import NoteLink, SearchQuery, ApplyQuery
+from search.models import ApplyQuery, SearchQuery
+from note.models import NoteLink
 
 
 class ApplyQuerySerializer(serializers.ModelSerializer):

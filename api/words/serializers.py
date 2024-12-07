@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from news.models import WordList
+from search.models import WordList
 
 
 class WordListSerializer(serializers.ModelSerializer):

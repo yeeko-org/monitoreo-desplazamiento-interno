@@ -6,7 +6,8 @@ from django.db.models import Count
 from api.common_views import BaseViewSet
 
 # from source.models import Source
-from news.models import Source, Cluster, SourceOrigin
+from search.models import Cluster
+from source.models import SourceOrigin, Source
 from category.models import StatusControl
 
 from api.catalogs.serializers import (
@@ -54,5 +55,3 @@ class ClusterViewSet(viewsets.ModelViewSet):
     # filter_class = ClusterFilter
     # search_fields = ['name', 'description']
     # ordering_fields = ['name', 'description']
-
-

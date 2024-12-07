@@ -16,7 +16,8 @@ from api.catalogs.serializers import (
     FilterGroupSerializer,
     SourceOriginSerializer,
 )
-from news.models import Source, Cluster, SearchQuery, WordList, SourceOrigin
+from source.models import Source, SourceOrigin
+from search.models import Cluster, SearchQuery, WordList
 from api.geo.serializers import StateListSerializer
 from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
 

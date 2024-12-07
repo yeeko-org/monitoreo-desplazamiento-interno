@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from news.models import NoteContent
+from note.models import NoteContent
 
 
 class IsFullEditorOrReadOnly(BasePermission):

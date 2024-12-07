@@ -11,7 +11,7 @@ from api.note.serializers import (
     NoteLinkAndContentSerializer, NoteLinkSerializer,
     BasicNoteContentSerializer, NoteLinkFullSerializer,
     NoteLinkSpecialSerializer)
-from news.models import ApplyQuery, NoteLink, NoteContent, Source, SourceMethod
+from note.models import NoteLink, NoteContent
 from utils.open_ai import JsonRequestOpenAI
 from api.pagination import CustomPagination
 
@@ -91,7 +91,7 @@ class NoteLinkViewSet(ModelViewSet):
 
     @action(detail=True, methods=["patch"])
     def get_note_content(self, request, pk=None):
-        from news.note_utils import GetNoteContent
+        from note.note_utils import GetNoteContent
 
         note_link = self.get_object()
         serializer = NoteLinkSpecialSerializer(
