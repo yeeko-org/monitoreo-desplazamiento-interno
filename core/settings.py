@@ -109,7 +109,9 @@ INSTALLED_APPS = [
     'profile_auth',
     'geo',
     'category',
-    'news',
+    'source',
+    'search',
+    'note',
 ]
 
 MIDDLEWARE = [
