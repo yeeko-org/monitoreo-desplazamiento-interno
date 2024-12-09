@@ -1,4 +1,4 @@
-from news.models import Cluster
+from news.models import Cluster, ValidOption
 
 
 class InitClusters:

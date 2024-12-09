@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from news.models import Source, Cluster, SourceOrigin
+from news.models import Source, Cluster, SourceOrigin, ValidOption
 from category.models import StatusControl
 from api.note.serializers import NoteLinkSerializer
 from ps_schema.models import (Level, Collection, CollectionLink, FilterGroup)
@@ -46,6 +46,12 @@ class SourceFullSerializer(serializers.ModelSerializer):
 class ClusterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cluster
+        fields = "__all__"
+
+
+class ValidOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ValidOption
         fields = "__all__"
 
 

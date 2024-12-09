@@ -44,7 +44,7 @@ class NoteLinkSpecialSerializer(serializers.ModelSerializer):
 class NoteLinkSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = NoteLink
-        fields = ["pk", "real_url", "is_dfi", "is_internal_dis"]
+        fields = ["pk", "real_url", "valid_option"]
 
 
 class SourceMethodSerializer(serializers.ModelSerializer):

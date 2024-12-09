@@ -21,10 +21,13 @@ class NoteContentFilter(FilterSet):
     # start_date = DateFilter(field_name='date', lookup_expr='gte')
     # end_date = DateFilter(field_name='date', lookup_expr='lte')
     status_register = CharFilter(field_name='status_register__name')
+    source_origin = NumberFilter(
+        field_name='note_link__source__source_origin', lookup_expr='exact')
+    source = NumberFilter(field_name='note_link__source', lookup_expr='exact')
 
     class Meta:
         model = NoteContent
-        fields = {'source': ['exact']}
+        fields = {'title': ['exact']}
 
 
 class NoteContentViewSet(ModelViewSet):
@@ -68,7 +71,7 @@ class NoteLinkFilter(FilterSet):
 
     class Meta:
         model = NoteLink
-        fields = {'source': ['exact']}
+        fields = {'valid_option': ['exact']}
 
 
 class NoteLinkViewSet(ModelViewSet):

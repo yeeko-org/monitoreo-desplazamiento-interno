@@ -14,6 +14,13 @@ all_collections = {
             },
         },
         {
+            "snake_name": "valid_option",
+            "name": "Opción de validación",
+            "plural_name": "Opciones de validación",
+            "model_name": "ValidOption",
+            "level": "category_subtype",
+        },
+        {
             "snake_name": "note_content",
             "name": "Contenido de Nota",
             "plural_name": "Contenidos de Notas",
@@ -36,6 +43,7 @@ all_collections = {
             "icon": 'insert_link',
             "all_filters": [
                 {"filter_name": "sources", "hidden": False},
+                {"filter_name": "valid_options", "hidden": False},
             ],
         },
         {
@@ -131,6 +139,16 @@ filter_groups = [
         "category_subtype": "news-word_list",
         # "category_subtype": "news-cluster",
     },
+    {
+        "key_name": "valid_options",
+        "name": "Clasificación de validación",
+        "plural_name": "Clasificaciones de validación",
+        "main_collection": "news-note_link",
+        "filter_collections": [
+            "news-note_link",
+        ],
+        "category_subtype": "news-valid_option",
+    },
     # {
     #     "key_name": "states",
     #     "name": "Estado",
@@ -168,6 +186,12 @@ collection_links = [
         "parent": "news-note_link",
         "child": "news-note_content",
         "link_type": "relational",
+        "is_mandatory": True,
+    },
+    {
+        "parent": "news-valid_option",
+        "child": "news-note_link",
+        "link_type": "category",
         "is_mandatory": True,
     },
     {

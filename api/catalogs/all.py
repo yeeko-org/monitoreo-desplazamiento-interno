@@ -15,8 +15,10 @@ from api.catalogs.serializers import (
     CollectionLinkSerializer,
     FilterGroupSerializer,
     SourceOriginSerializer,
+    ValidOptionSerializer,
 )
-from news.models import Source, Cluster, SearchQuery, WordList, SourceOrigin
+from news.models import (
+    Source, Cluster, SearchQuery, WordList, SourceOrigin, ValidOption)
 from api.geo.serializers import StateListSerializer
 from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
 
@@ -31,21 +33,14 @@ class CatalogsView(APIView):
 
         catalogs = {
 
-            # "event_groups": EventGroupSerializer(
-            #     EventGroup.objects.all(), many=True).data,
-            # "event_types": EventTypeSerializer(
-            #     EventType.objects.all(), many=True).data,
-            # "event_subtypes": EventSubtypeSerializer(
-            #     EventSubtype.objects.all(), many=True).data,
-            # "involved_roles": InvolvedRoleSerializer(
-            #     InvolvedRole.objects.all(), many=True).data,
-
             "sources": SourceSerializer(
                 Source.objects.all(), many=True).data,
             "source_origins": SourceOriginSerializer(
                 SourceOrigin.objects.all(), many=True).data,
             "clusters": ClusterSerializer(
                 Cluster.objects.all(), many=True).data,
+            "valid_options": ValidOptionSerializer(
+                ValidOption.objects.all(), many=True).data,
 
             "word_lists": WordListSerializer(
                 WordList.objects.all(), many=True).data,

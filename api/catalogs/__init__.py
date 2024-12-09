@@ -6,7 +6,7 @@ from django.db.models import Count
 from api.common_views import BaseViewSet
 
 # from source.models import Source
-from news.models import Source, Cluster, SourceOrigin
+from news.models import Source, Cluster, SourceOrigin, ValidOption
 from category.models import StatusControl
 
 from api.catalogs.serializers import (
@@ -16,6 +16,7 @@ from api.catalogs.serializers import (
     SourceOriginSerializer,
     StatusControlSerializer,
     ClusterSerializer,
+    ValidOptionSerializer
 )
 from .all import CatalogsView  # noqa
 # from ..common_views import BaseViewSet, BaseStatusViewSet
@@ -26,6 +27,12 @@ class SourceOriginViewSet(BaseViewSet):
     permission_classes = [permissions.IsAuthenticated]
     queryset = SourceOrigin.objects.all()
     serializer_class = SourceOriginSerializer
+
+
+class ValidOptionViewSet(BaseViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = ValidOption.objects.all()
+    serializer_class = ValidOptionSerializer
 
 
 class SourceViewSet(BaseViewSet):

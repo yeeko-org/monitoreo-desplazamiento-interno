@@ -1,6 +1,5 @@
 from datetime import date
 import json
-from pprint import pprint
 from typing import List, Optional, Any, Union
 from bs4 import BeautifulSoup
 import requests
@@ -48,8 +47,8 @@ class Source(models.Model):
     has_content = models.BooleanField(
         blank=True, null=True, verbose_name='Es scrapeable')
     scraper_message = models.TextField(blank=True, null=True)
-    national = models.CharField(
-        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+    # national = models.CharField(
+    #     choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
     is_active = models.BooleanField(
         blank=True, null=True, verbose_name='Activa')
 
@@ -328,7 +327,7 @@ class SearchQuery(models.Model):
             note_link = NoteLink.objects.filter(gnews_url=gnews_url).first()
             if note_link:
                 # if note_link.is_dfi is not None or note_link.pre_is_dfi is not None:
-                if note_link.is_internal_dis or note_link.pre_is_dfi is not None:
+                if note_link.valid_option or note_link.pre_is_dfi is not None:
                     continue
 
             entries_for_openai.append({
@@ -475,6 +474,23 @@ class ApplyQuery(models.Model):
         verbose_name_plural = 'Aplicaciones de consulta'
 
 
+class ValidOption(models.Model):
+
+    name = models.CharField(max_length=100)
+    order = models.SmallIntegerField(default=5)
+    icon = models.CharField(max_length=100, blank=True, null=True)
+    color = models.CharField(max_length=20, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Opción de validación'
+        verbose_name_plural = 'Opciones de validación'
+
+
 class NoteLink(models.Model):
 
     INTERNAL_DIS_CHOICES = [
@@ -496,6 +512,8 @@ class NoteLink(models.Model):
     is_dfi = models.BooleanField(blank=True, null=True)
     is_internal_dis = models.CharField(
         choices=INTERNAL_DIS_CHOICES, max_length=10, blank=True, null=True)
+    valid_option = models.ForeignKey(
+        ValidOption, on_delete=models.CASCADE, blank=True, null=True)
     pre_is_dfi = models.BooleanField(blank=True, null=True)
 
     note_contents: models.QuerySet["NoteContent"]

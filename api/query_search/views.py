@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from news.models import ApplyQuery, NoteLink, SearchQuery, NoteContent, Source
 from api.query_search.serializers import (
     ApplyQuerySerializer, SearchQuerySerializer, WhenSerializer,
-    ApplyQueryFullSerializer)
+    ApplyQueryFullSerializer, SearchQueryFullSerializer)
 from api.note.serializers import (
     NoteLinkFullSerializer, NoteLinkSerializer)
 from api.catalogs.serializers import SourceSerializer
@@ -140,6 +140,7 @@ class SearchQueryViewSet(SearchMixin, ModelViewSet):
     def get_serializer_class(self):  # type: ignore
         actions = {
             "search": WhenSerializer,
+            "retrieve": SearchQueryFullSerializer,
         }
         try:
             return actions.get(self.action, self.serializer_class)
