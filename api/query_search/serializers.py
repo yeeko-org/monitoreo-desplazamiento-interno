@@ -22,6 +22,13 @@ class ApplyQueryFullSerializer(serializers.ModelSerializer):
 
 class SearchQuerySerializer(serializers.ModelSerializer):
 
+    class Meta:
+        model = SearchQuery
+        fields = '__all__'
+
+
+class SearchQueryFullSerializer(serializers.ModelSerializer):
+
     note_links = serializers.SerializerMethodField(read_only=True)
     apply_queries = ApplyQuerySerializer(many=True, read_only=True)
     query_words_soft = serializers.ReadOnlyField()

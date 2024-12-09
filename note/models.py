@@ -11,6 +11,23 @@ from search.models import ApplyQuery
 REQUESTS_DEFAULT_HEADERS = {'User-Agent': 'Mozilla/4.0'}
 
 
+class ValidOption(models.Model):
+
+    name = models.CharField(max_length=100)
+    order = models.SmallIntegerField(default=5)
+    icon = models.CharField(max_length=100, blank=True, null=True)
+    color = models.CharField(max_length=20, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Opción de validación'
+        verbose_name_plural = 'Opciones de validación'
+
+
 class NoteLink(models.Model):
 
     INTERNAL_DIS_CHOICES = [
@@ -32,6 +49,12 @@ class NoteLink(models.Model):
     is_dfi = models.BooleanField(blank=True, null=True)
     is_internal_dis = models.CharField(
         choices=INTERNAL_DIS_CHOICES, max_length=10, blank=True, null=True)
+    valid_option = models.ForeignKey(
+        ValidOption, on_delete=models.CASCADE, blank=True, null=True,
+        related_name='valid_option')
+    pre_valid_option = models.ForeignKey(
+        ValidOption, on_delete=models.CASCADE, blank=True, null=True,
+        related_name='pre_valid_option')
     pre_is_dfi = models.BooleanField(blank=True, null=True)
 
     note_contents: models.QuerySet["NoteContent"]

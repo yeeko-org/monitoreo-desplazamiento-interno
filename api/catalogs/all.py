@@ -15,8 +15,10 @@ from api.catalogs.serializers import (
     CollectionLinkSerializer,
     FilterGroupSerializer,
     SourceOriginSerializer,
+    ValidOptionSerializer,
 )
 from source.models import Source, SourceOrigin
+from note.models import ValidOption
 from search.models import Cluster, SearchQuery, WordList
 from api.geo.serializers import StateListSerializer
 from ps_schema.models import Level, Collection, CollectionLink, FilterGroup
@@ -47,6 +49,8 @@ class CatalogsView(APIView):
                 SourceOrigin.objects.all(), many=True).data,
             "clusters": ClusterSerializer(
                 Cluster.objects.all(), many=True).data,
+            "valid_options": ValidOptionSerializer(
+                ValidOption.objects.all(), many=True).data,
 
             "word_lists": WordListSerializer(
                 WordList.objects.all(), many=True).data,

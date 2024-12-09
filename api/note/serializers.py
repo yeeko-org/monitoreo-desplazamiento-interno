@@ -19,7 +19,7 @@ class SourceSimpleSerializer(serializers.ModelSerializer):
 
 class NoteLinkFullSerializer(serializers.ModelSerializer):
     note_contents = BasicNoteContentSerializer(many=True, read_only=True)
-    source = SourceSimpleSerializer(read_only=True)
+    # source = SourceSimpleSerializer(read_only=True)
 
     class Meta:
         model = NoteLink
@@ -40,12 +40,6 @@ class NoteLinkSpecialSerializer(serializers.ModelSerializer):
         # read_only_fields = ["gnews_url", "source", "title"]
         # exclude = ["gnews_url", "title"]
         fields = "__all__"
-
-
-class NoteLinkSimpleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = NoteLink
-        fields = ["pk", "real_url", "is_dfi", "is_internal_dis"]
 
 
 class SourceMethodSerializer(serializers.ModelSerializer):

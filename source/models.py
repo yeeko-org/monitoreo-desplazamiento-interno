@@ -32,16 +32,18 @@ class Source(models.Model):
         ('For', 'Extranjera'),
     ]
 
+    name = models.CharField(max_length=100)
+    main_url = models.CharField(max_length=100, blank=True, null=True)
     source_origin = models.ForeignKey(
         SourceOrigin, on_delete=models.CASCADE,
         related_name='sources', default=1)  # type: ignore
-    name = models.CharField(max_length=100)
-    main_url = models.CharField(max_length=100, blank=True, null=True)
+    origin_checked = models.BooleanField(
+        default=False, verbose_name='Origen verificado')
     has_content = models.BooleanField(
         blank=True, null=True, verbose_name='Es scrapeable')
     scraper_message = models.TextField(blank=True, null=True)
-    national = models.CharField(
-        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+    # national = models.CharField(
+    #     choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
     is_active = models.BooleanField(
         blank=True, null=True, verbose_name='Activa')
 

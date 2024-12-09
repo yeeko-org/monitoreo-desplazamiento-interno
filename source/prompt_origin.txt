@@ -1,0 +1,33 @@
+I have a list of source of news articles, I need identify the useful sources for a local analysis, I need to know if the source is:
+-mexican (National or local inside of Mexico)
+-international (Have a presence in a large part of the world or can write special articles or researches about Mexico topics)
+-foreign (Focused in other country or region, articles about Mexico are not common or are superficial)
+-unknown (It's not clear if the source is National, international or foreign)
+
+For each source I have an id, the name and their url. Return me the same Json file with the classification of the origin (mexican, international, foreign or unknown)
+
+====
+
+17: UDG www.udg.mx
+34 Diario Cambio 22 (diariocambio22.mx)
+356: BBC (www.bbc.com)
+357: ANHA (hawarnews.com)
+358: Euronews Español (es.euronews.com)
+359: El nuevo día (www.elnuevodia.com)
+360: El País (elpais.com)
+361: El HuffPost (huffingtonpost.es)
+362: La Vanguardia (www.lavanguardia.com)
+
+====
+
+{
+    "17": "mexican",
+    "34": "mexican",
+    "356": "international",
+    "357": "foreign",
+    "358": "international",
+    "359": "unknown",
+    "360": "international",
+    "361": "international",
+    "362": "international"
+}

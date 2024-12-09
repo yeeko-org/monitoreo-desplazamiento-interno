@@ -50,7 +50,8 @@ class GetNoteContent:
     def get_content(self):
 
         # if self.note_link.is_dfi is False:
-        if self.note_link.is_internal_dis == 'invalid':
+        # if self.note_link.is_internal_dis == 'invalid':
+        if self.note_link.valid_option.name == 'Inválido':
             raise HttpResponseError(http_status=200)
 
         if not self.note_link.real_url:
@@ -84,7 +85,7 @@ class GetNoteContent:
             .encode("utf-8", errors="ignore")\
             .decode("utf-8")
 
-        tags_open_ai = JsonRequestOpenAI("news/prompt_tags.txt")
+        tags_open_ai = JsonRequestOpenAI("note/prompt_tags.txt")
         tags_content = tags_open_ai.send_prompt(full_prompt)
         print("tags_content", tags_content)
         if not tags_content:

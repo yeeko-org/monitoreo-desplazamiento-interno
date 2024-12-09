@@ -142,7 +142,7 @@ class InitFilterGroups:
     def __init__(self):
         # FilterGroup.objects.all().delete()
         collections_dict = {
-            f"{collection.app_label}-{collection.snake_name}": collection
+            collection.snake_name: collection
             for collection in Collection.objects.all()}
         print("collections_dict", collections_dict)
         for group in filter_groups:
@@ -158,8 +158,6 @@ class InitFilterGroups:
             )
             filter_group.name = group.get('name', "Sin nombre")
             filter_group.plural_name = group.get('plural_name', "Sin nombre plural")
-            # filter_group.main_collection = collections_dict.get(
-            #     group['main_collection'], None)
             filter_group.category_group = collections_dict.get(
                 group.get('category_group', None), None)
             filter_group.category_type = collections_dict.get(
@@ -175,7 +173,7 @@ class InitCollectionLinks:
     def __init__(self):
         # CollectionLink.objects.all().delete()
         collections_dict = {
-            f"{collection.app_label}-{collection.snake_name}": collection
+            collection.snake_name: collection
             for collection in Collection.objects.all()}
         for link in collection_links:
             filter_group_obj = None

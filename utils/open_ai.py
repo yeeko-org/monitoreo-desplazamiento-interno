@@ -34,6 +34,7 @@ class JsonRequestOpenAI:
         self.engine = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o')
         self.messages: list[dict] = []
         self.to_json = to_json
+        self.response = None
         with open(prompt_path, "r", encoding="utf-8") as file:
             init_prompt = file.read()
         msgs = init_prompt.split("\n====\n")
@@ -62,6 +63,7 @@ class JsonRequestOpenAI:
                 frequency_penalty=0,
                 presence_penalty=0
             )
+            self.response = response
         except openai.BadRequestError as e:
             print(f"messages: {self.messages}")
             print(f"OpenAI BadRequestError: {e}")
@@ -83,6 +85,11 @@ class JsonRequestOpenAI:
         # print(f"role: {role}\nprompt: {prompt}\n")
         if len(prompt) > 9000:
             prompt = prompt[:9000]
+        if self.to_json and role == "assistant":
+            try:
+                prompt = json.dumps(json.loads(prompt))
+            except Exception as e:
+                print(f"Error converting to json: {e}")
         self.messages.append({
             "role": role,
             "content": [

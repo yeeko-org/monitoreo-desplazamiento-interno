@@ -21,10 +21,13 @@ class NoteContentFilter(FilterSet):
     # start_date = DateFilter(field_name='date', lookup_expr='gte')
     # end_date = DateFilter(field_name='date', lookup_expr='lte')
     status_register = CharFilter(field_name='status_register__name')
+    source_origin = NumberFilter(
+        field_name='note_link__source__source_origin', lookup_expr='exact')
+    source = NumberFilter(field_name='note_link__source', lookup_expr='exact')
 
     class Meta:
         model = NoteContent
-        fields = {'source': ['exact']}
+        fields = {'title': ['exact']}
 
 
 class NoteContentViewSet(ModelViewSet):
@@ -43,7 +46,7 @@ class NoteContentViewSet(ModelViewSet):
     def additional_info(self, request, pk=None):
         note_content = self.get_object()
         note_open_ai = JsonRequestOpenAI(
-            'news/structure_prompt.txt', to_json=False)
+            'note/structure_prompt.txt', to_json=False)
         try:
             subtitle = note_content.subtitle
             date = note_content.note_link.published_at
@@ -68,7 +71,7 @@ class NoteLinkFilter(FilterSet):
 
     class Meta:
         model = NoteLink
-        fields = {'source': ['exact']}
+        fields = {'valid_option': ['exact']}
 
 
 class NoteLinkViewSet(ModelViewSet):

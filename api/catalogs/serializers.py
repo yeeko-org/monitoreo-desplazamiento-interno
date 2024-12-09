@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from source.models import Source, SourceOrigin
 from search.models import Cluster
+from note.models import ValidOption
 from category.models import StatusControl
 from api.note.serializers import NoteLinkSerializer
 from ps_schema.models import (Level, Collection, CollectionLink, FilterGroup)
@@ -20,6 +21,14 @@ class SourceOriginSerializer(serializers.ModelSerializer):
 
 
 class SourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Source
+        fields = "__all__"
+
+
+class PreSourceSerializer(serializers.ModelSerializer):
+    source_origin = SourceOriginSerializer()
+
     class Meta:
         model = Source
         fields = "__all__"
@@ -47,6 +56,12 @@ class SourceFullSerializer(serializers.ModelSerializer):
 class ClusterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cluster
+        fields = "__all__"
+
+
+class ValidOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ValidOption
         fields = "__all__"
 
 

@@ -1,34 +1,43 @@
-I have a json of a list of articles, each block of information has title, id, source_url and source_title, I want that for each block of data using the title, you determine if it falls into the topic of forced displacement within the same territory for Mexico, you will add a new field called "is_dfi", where true: it falls into the topic, null: you are not sure, false: it does not fall into the topic
+Tengo una lista de títulos de artículos de noticias, cada bloque tiene id, título de la fuente, URL de la fuente y título.
 
-From the other fields, source_url and source_title, check if they are national sources ("Nal"), foreign ("For") or international ("Int"), where international are the newscasts that have a presence in a large part of the world such as BBC, add the field "source_is_foreign" with any of the options ["Nal", "For", "Int", null]
+Necesito clasificar, basándome en la definición del ACNUR, los artículos que hablan o podrían estar relacionados con el desplazamiento forzado en México.
+"El desplazamiento forzado interno en México se refiere a personas o grupos de personas que se han visto forzadas u obligadas a huir o abandonar sus hogares o lugares de residencia habitual dentro del territorio nacional mexicano, como resultado o para evitar los efectos de situaciones diversas entre las cuales se encuentran violencia, grupos delictivos, violaciones de derechos humanos, desastres naturales o causados por el ser humano, proyectos de desarrollo, y otras circunstancias, sin haber cruzado una frontera estatal internacionalmente reconocida. Esto incluye específicamente a personas que se ven obligadas a trasladarse de un estado, municipio o comunidad a otro dentro de las fronteras de México.
+Los artículos pueden no explicitar como "forzado" el movimiento de las personas, pero cualquier cambio de residencia que se haya dado por las circunstancias mencionadas anteriormente o relacionadas, debe ser considerado como válido.
 
-Return me the same Json with the added fields.
+Por favor, clasifica como "inválidos" los artículos que no están relacionados con el desplazamiento forzado en México, como artículos sobre desplazamiento forzado en otros países o artículos sobre otros temas no relacionados.
+
+Las cuatro posibles clasificaciones son:
+
+"válido" para artículos que hablan sobre desplazamiento forzado en México
+"inválido" para artículos que no están relacionados con el desplazamiento forzado en México
+"podría ser" para artículos que podrían estar relacionados con el desplazamiento forzado en México, pero no está claro
+"desconocido" para artículos donde no está claro si están relacionados con el desplazamiento forzado en México
+
+Devuelve un objeto JSON con el id del artículo y la clasificación correspondiente.
+
 ====
 
-[
-    {
-        "id": "CBMitgFBVV95cUxPcEpkWnFOUmp2cnR1a2xiZURi",
-        "source_url": "https://www.udg.mx",
-        "source_title": "UDG",
-        "title": "Mesa: Políticas migratorias en países receptores. Retos y oportunidades para atender los desplazamientos forzados y mixtos en una agenda global",
-    },
-    {
-        "id": "CBMi3AFBVV95cUxQcWRyRmF4WHNUNjhtSHVEYVFB",
-        "source_url": "https://diariocambio22.mx",
-        "source_title": "Diario Cambio 22",
-        "title": "Empresarios Ven Positivo que Trabajos de Mantenimiento de la Carretera Federal 307 se Realicen Durante Temporada Alta",
-    }
-]
+1: UDG (udg.mx) - Mesa: Políticas migratorias en países receptores. Retos y oportunidades para atender los desplazamientos forzados y mixtos en una agenda global
+2: Diario Cambio 22 (diariocambio22.mx) - Empresarios Ven Positivo que Trabajos de Mantenimiento de la Carretera Federal 307 se Realicen Durante Temporada Alta
+3: N+ (nmas.com.mx) - N+ Focus en FORO: Los Desplazados del Bosque
+4: La Jornada (www.jornada.unam.mx) - La ONU pide a México que garantice la protección de los derechos de los migrantes
+5: Sinart Digital (sinartdigital.com) - ACNUR anuncia récord de personas desplazadas en las Américas, urgen fondos
+6: Hoy Tamaulipas (hoytamaulipas.net) - Seguridad Publica de Tamaulipas no ve desplazados en San Fernando
+7: Yahoo Noticias (es-us.noticias.yahoo.com) - Crisis en Siria: decenas de civiles muertos y miles de desplazados en el nuevo capítulo de la guerra
+8: MSN México (http://www.msn.com) - Crisis en Sinaloa: 18 mil familias desplazadas por violencia y sequías
+9: El Universal (www.eluniversal.com.mx) - Reflexiones políticas de la semana
+
 
 ====
 
 {
-    "CBMitgFBVV95cUxPcEpkWnFOUmp2cnR1a2xiZURi":{
-        "is_dfi": true,
-        "source_is_foreign": "Int"
-    },
-    "CBMi3AFBVV95cUxQcWRyRmF4WHNUNjhtSHVEYVFB": {
-        "is_dfi": false,
-        "source_is_foreign": "Nal"
-    }
+    "1": "válido",
+    "2": "inválido",
+    "3": "podría ser",
+    "4": "podría ser",
+    "5": "podría ser",
+    "6": "válido",
+    "7": "inválido",
+    "8": "válido",
+    "9": "desconocido"
 }

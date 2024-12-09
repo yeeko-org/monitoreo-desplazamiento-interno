@@ -493,7 +493,7 @@ The title previously mentioned is: Millones de mujeres y niñas obligadas a huir
 
 {
     "title": {
-        "class": "headline"
+        "class": "headline",
         "tag": "h1",
         "multiple": false
     },

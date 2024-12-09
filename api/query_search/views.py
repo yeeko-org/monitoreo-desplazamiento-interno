@@ -10,10 +10,10 @@ from search.models import ApplyQuery, SearchQuery
 from note.models import NoteLink
 from api.query_search.serializers import (
     ApplyQuerySerializer, SearchQuerySerializer, WhenSerializer,
-    ApplyQueryFullSerializer)
+    ApplyQueryFullSerializer, SearchQueryFullSerializer)
 from api.note.serializers import (
     NoteLinkFullSerializer, NoteLinkSerializer)
-from api.catalogs.serializers import SourceSerializer
+from api.catalogs.serializers import SourceSerializer, PreSourceSerializer
 from typing import Optional
 
 
@@ -59,8 +59,8 @@ class SearchMixin:
             if save_apply_query:
                 self.apply_query.save()
 
-        print("search_entries ready")
         self.built_note_links = []
+        new_sources = []
 
         for entry in search_entries:
 
@@ -74,10 +74,12 @@ class SearchMixin:
             title = entry.pop('title')
             source = entry.pop('source')
             entry['gnews_source'] = source
+            pre_valid_option = entry.pop('pre_valid_option', None)
             pre_link = {
                 "gnews_entry": entry,
                 "gnews_url": gnews_url,
                 "note_contents": [],
+                "pre_valid_option": pre_valid_option,
             }
             split = title.rsplit(' - ', 1)
             if len(split) == 2:
@@ -105,6 +107,10 @@ class SearchMixin:
                             "pre_national": pre_national,
                         }
                     )
+                    if source_obj_created:
+                        new_sources.append(source_obj)
+                        # source_obj.pre_source_origin = source_obj.source_origin
+                        # source_obj.save()
                 except Exception as e:
                     source_obj = Source.objects.filter(
                         main_url=source['href']).first()
@@ -118,30 +124,35 @@ class SearchMixin:
                 source_obj = Source.objects.filter(
                     main_url=source['href']).first()
                 if source_obj:
-                    source_serializer = SourceSerializer(source_obj)
-                    pre_link['source'] = source_serializer.data
+                    source_serializer = PreSourceSerializer(source_obj)
+                    pre_link['source_full'] = source_serializer.data
                 else:
-                    pre_link['source'] = {
+                    pre_link['source_full'] = {
                         "name": source['title'],
                         "main_url": source['href'],
                     }
                 self.built_note_links.append(pre_link)
 
+        # source_serializer = SourceSerializer(new_sources, many=True)
+        all_sources = SourceSerializer(Source.objects.all(), many=True)
         return {
             'search_count': len(self.built_note_links),
             'note_links': self.built_note_links,
             'feed': links_data.get('feed'),
+            'all_sources': all_sources.data,
         }
 
 
 class SearchQueryViewSet(SearchMixin, ModelViewSet):
     queryset = SearchQuery.objects.all()
-    serializer_class = SearchQuerySerializer
+    # serializer_class = SearchQuerySerializer
+    serializer_class = SearchQueryFullSerializer
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):  # type: ignore
         actions = {
             "search": WhenSerializer,
+            "list": SearchQuerySerializer,
         }
         try:
             return actions.get(self.action, self.serializer_class)
@@ -191,11 +202,13 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def search(self, request, pk=None):
+        import traceback
         self.apply_query = self.get_object()
         try:
             search_query_data = self.search_data()
         except Exception as e:
             self.apply_query.add_errors(str(e))
+            print(traceback.format_exc())
             raise ValidationError(str(e))
             # raise e  # para debug
         for entry in search_query_data['note_links']:

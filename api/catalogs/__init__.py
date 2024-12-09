@@ -9,6 +9,7 @@ from api.common_views import BaseViewSet
 from search.models import Cluster
 from source.models import SourceOrigin, Source
 from category.models import StatusControl
+from note.models import ValidOption
 
 from api.catalogs.serializers import (
     SourceSerializer,
@@ -17,6 +18,7 @@ from api.catalogs.serializers import (
     SourceOriginSerializer,
     StatusControlSerializer,
     ClusterSerializer,
+    ValidOptionSerializer,
 )
 from .all import CatalogsView  # noqa
 # from ..common_views import BaseViewSet, BaseStatusViewSet
@@ -34,12 +36,19 @@ class SourceViewSet(BaseViewSet):
     queryset = Source.objects.all()\
         .prefetch_related('note_links')
     serializer_class = SourceCountSerializer
+    filterset_fields = ['source_origin']
 
     def get_serializer_class(self):
         action_serializer = {
             'retrieve': SourceFullSerializer,
         }
         return action_serializer.get(self.action, self.serializer_class)
+
+
+class ValidOptionViewSet(BaseViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = ValidOption.objects.all()
+    serializer_class = ValidOptionSerializer
 
 
 class StatusControlViewSet(viewsets.ModelViewSet):
