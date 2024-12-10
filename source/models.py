@@ -47,8 +47,8 @@ class Source(models.Model):
     is_active = models.BooleanField(
         blank=True, null=True, verbose_name='Activa')
 
-    pre_national = models.CharField(
-        choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
+    # pre_national = models.CharField(
+    #     choices=NATIONAL_CHOICES, max_length=3, blank=True, null=True)
     pre_source_origin = models.ForeignKey(
         SourceOrigin, on_delete=models.CASCADE, blank=True, null=True,
         related_name='pre_sources')

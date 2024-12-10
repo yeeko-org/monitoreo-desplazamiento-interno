@@ -13,7 +13,6 @@ def create_source_origins(apps, schema_editor):
             defaults=dict(
                 color=color,
                 order=order,
-                # in_scope=in_scope
             )
         )
     Source = apps.get_model('source', 'Source')
@@ -22,7 +21,6 @@ def create_source_origins(apps, schema_editor):
             .filter(national=source_origin.old_name)\
             .update(source_origin=source_origin)
         Source.objects\
-            .filter(pre_national=source_origin.old_name)\
             .update(pre_source_origin=source_origin)
     empty_source_origin = SourceOrigin.objects.get(name='Desconocido')
     Source.objects\

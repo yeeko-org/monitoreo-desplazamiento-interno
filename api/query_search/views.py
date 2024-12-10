@@ -96,16 +96,10 @@ class SearchMixin:
             pre_link["published_at"] = published_at
 
             if self.apply_query:
-                pre_national = source.get('pre_national')
-                if pre_national not in ["Nal", "Int", "For"]:
-                    pre_national = None
                 try:
                     source_obj, source_obj_created = Source.objects.get_or_create(
                         main_url=source['href'],
-                        defaults={
-                            "name": source['title'],
-                            "pre_national": pre_national,
-                        }
+                        defaults={"name": source['title']}
                     )
                     if source_obj_created:
                         new_sources.append(source_obj)

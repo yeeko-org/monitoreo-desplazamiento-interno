@@ -2,7 +2,7 @@ Tengo una lista de títulos de artículos de noticias, cada bloque tiene id, tí
 
 Necesito clasificar, basándome en la definición del ACNUR, los artículos que hablan o podrían estar relacionados con el desplazamiento forzado en México.
 "El desplazamiento forzado interno en México se refiere a personas o grupos de personas que se han visto forzadas u obligadas a huir o abandonar sus hogares o lugares de residencia habitual dentro del territorio nacional mexicano, como resultado o para evitar los efectos de situaciones diversas entre las cuales se encuentran violencia, grupos delictivos, violaciones de derechos humanos, desastres naturales o causados por el ser humano, proyectos de desarrollo, y otras circunstancias, sin haber cruzado una frontera estatal internacionalmente reconocida. Esto incluye específicamente a personas que se ven obligadas a trasladarse de un estado, municipio o comunidad a otro dentro de las fronteras de México.
-Los artículos pueden no explicitar como "forzado" el movimiento de las personas, pero cualquier cambio de residencia que se haya dado por las circunstancias mencionadas anteriormente o relacionadas, debe ser considerado como válido.
+Los artículos pueden no explicitar como "forzado" el movimiento de las personas, pero cualquier cambio de ubicación que se haya dado por las circunstancias mencionadas anteriormente o relacionadas, debe ser considerado como válido.
 
 Por favor, clasifica como "inválidos" los artículos que no están relacionados con el desplazamiento forzado en México, como artículos sobre desplazamiento forzado en otros países o artículos sobre otros temas no relacionados.
 

@@ -77,7 +77,7 @@ def field_of_models(collection: Collection):
             "width": width,
         }
         try:
-            final_field["verbose_name"] = field.verbose_name
+            final_field["verbose_name"] = field.verbose_name or field.name
         except AttributeError:
             pass
         if is_char:

@@ -3,7 +3,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
-from django_filters import FilterSet, DateFilter, CharFilter, NumberFilter
+from django_filters import (
+    FilterSet, DateFilter, CharFilter, NumberFilter, BooleanFilter)
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from api.common_views import BaseViewSet
@@ -68,6 +69,8 @@ class NoteLinkFilter(FilterSet):
     status_register = CharFilter(field_name='status_register__name')
     source_origin = NumberFilter(
         field_name='source__source_origin', lookup_expr='exact')
+    valid_option_null = BooleanFilter(
+        field_name='valid_option', lookup_expr='isnull', exclude=False)
 
     class Meta:
         model = NoteLink
