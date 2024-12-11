@@ -1,16 +1,13 @@
 from datetime import date
-import json
 from typing import List, Optional, Any, Union
 
 
 from django.db import models
-from utils.open_ai import JsonRequestOpenAI
-from utils.yeeko_gnews import YeekoGoogleNews
 
 from category.models import StatusControl
-from utils.date_time import get_range_dates, parse_gmt_date_list
+from utils.date_time import parse_gmt_date_list
 
-from source.models import Source, SourceOrigin
+from source.models import Source
 
 
 class Cluster(models.Model):
@@ -161,6 +158,7 @@ class SearchQuery(models.Model):
             self, when: Optional[Any], from_date: Optional[date],
             to_date: Optional[date]
     ):
+        from search.search_service import SearchService
         if self.use_manual_query:
             if not self.manual_query:
                 raise ValueError("Manual query is empty")
@@ -171,71 +169,6 @@ class SearchQuery(models.Model):
                 raise ValueError("Query is empty")
             final_query = self.query
 
-        if when:
-            links_data = self.search_when(when, final_query)
-        elif from_date and to_date:
-            links_data = self.search_from_to(from_date, to_date, final_query)
-        else:
-            raise ValueError("No dates provided")
-
-        entries = self.search_filter_soft(
-            links_data.get("entries", []))
-
-        if not when:
-            entries = self.pre_classify_openai(entries)
-
-        return {
-            "entries": entries,
-            "feed": links_data.get("feed"),
-            "errors": links_data.get("errors")  # type: ignore
-        }
-
-    def search_from_to(
-            self, from_date: date, to_date: date, search_query: str
-    ):
-
-        search_kwargs = {}
-        range_dates = get_range_dates(None, from_date, to_date)
-        all_links_data = []
-        last_feed = None
-        errors = []
-        for from_date_r, to_date_r in range_dates:
-
-            search_kwargs["from_"] = from_date_r.strftime("%Y-%m-%d")
-            search_kwargs["to_"] = to_date_r.strftime("%Y-%m-%d")
-
-            gn = YeekoGoogleNews("es", "MX")
-            print("Searching...\n", search_query, "\n", search_kwargs)
-            try:
-                links_data = gn.search(
-                    search_query, helper=False, **search_kwargs)
-            except Exception as e:
-                errors.append(str(e))
-                continue
-            all_links_data.extend(links_data.get("entries", []))
-            last_feed = links_data.get("feed", None)
-
-        return {
-            "entries": all_links_data,
-            "feed": last_feed,
-            "errors": errors
-        }
-
-    def search_when(
-            self, when: Any, search_query: str
-    ):
-        try:
-            when = int(when)
-            when = f"{when}d"
-        except ValueError:
-            pass
-        search_kwargs = {"when": when or "1d"}
-        gn = YeekoGoogleNews("es", "MX")
-        print("Searching...\n", search_query, "\n", search_kwargs)
-        return gn.search(search_query, helper=False, **search_kwargs)
-
-    def search_filter_soft(self, entries: List[dict]):
-        entries_filtered = []
         all_negative_words = []
         for word_list in self.negative_words.all():
             all_negative_words.extend(
@@ -245,199 +178,10 @@ class SearchQuery(models.Model):
         all_negative_words = [
             word.strip().lower() for word in all_negative_words if word.strip()]
 
-        for entry in entries:
-            title = entry.get("title", "").lower()
-            summary = entry.get("summary", "").lower()
-            if any([
-                word in title or word in summary
-                for word in all_negative_words
-            ]):
-                continue
-
-            entries_filtered.append(entry)
-        return entries_filtered
-
-    def pre_classify_openai(self, entries: List[dict]):
-        from note.models import NoteLink, ValidOption
-
-        entries_for_openai = []
-        pending_sources = {}
-        new_sources_ids = []
-        valid_origins = SourceOrigin.objects.filter(
-            name__in=["Nacional", "Internacional"]).values_list("id", flat=True)
-        valid_sources = Source.objects.filter(source_origin__in=valid_origins)
-        valid_sources_dict = {source.main_url: source
-                              for source in valid_sources}
-        unknown_sources = Source.objects\
-            .filter(source_origin__name="Desconocido")
-        unknown_dict = {source.main_url: {"id": source.id, "name": source.name}
-                        for source in unknown_sources}
-        foreign_sources = Source.objects\
-            .filter(source_origin__name="Extranjera")\
-            .values_list("main_url", flat=True)
-
-        current_id = 1
-        for openai_entry in entries:
-
-            new_entry = {
-                "title": openai_entry.get("title"),
-                "prov_id": current_id
-            }
-            openai_entry["prov_id"] = current_id
-            # openai_entry["prov_id"] = current_id
-            current_id += 1
-            # gnews_id = openai_entry.get("id", "")
-            gnews_url = openai_entry.get("link")
-            gnews_source_title = openai_entry.get("source", {}).get("title")
-            gnews_source_url = openai_entry.get("source", {}).get("href")
-            if gnews_source_url in foreign_sources:
-                continue
-
-            if gnews_source_url not in valid_sources_dict:
-                source_dict = {
-                    "title": gnews_source_title,
-                    "main_url": gnews_source_url,
-                }
-                origin = self.get_origin_by_domain(gnews_source_url)
-                if source_obj := unknown_dict.get(gnews_source_url):
-                    source_dict["id"] = source_obj["id"]
-                else:
-                    new_source, created = Source.objects.get_or_create(
-                        name=gnews_source_title,
-                        main_url=gnews_source_url,
-                    )
-                    if created:
-                        new_sources_ids.append(new_source.id)
-                    source_dict["id"] = new_source.id
-                    if origin:
-                        new_source.source_origin = origin
-                        new_source.save()
-                    else:
-                        pending_sources.setdefault(
-                            gnews_source_url, source_dict)
-                if origin and origin.name == "Extranjera":
-                    continue
-                new_entry["source_id"] = source_dict["id"]
-
-            note_link = NoteLink.objects.filter(gnews_url=gnews_url).first()
-            if note_link:
-                # if note_link.is_dfi is not None or note_link.pre_is_dfi is not None:
-                if note_link.valid_option or note_link.pre_is_dfi is not None:
-                    continue
-            new_entry.update({
-                "source_url": gnews_source_url,
-                "source_title": gnews_source_title
-            })
-            entries_for_openai.append(new_entry)
-
-        clean_entries = []
-        if pending_sources:
-            new_foreign_sources = self.pre_classify_sources(pending_sources)
-            # print("New foreign sources", new_foreign_sources)
-            # entries_for_openai = [
-            #     entry for entry in entries_for_openai
-            #     if entry.get("source_id") not in new_foreign_sources
-            # ]
-            for entry in entries_for_openai:
-                source_id = entry.get("source_id")
-                if source_id and source_id in new_foreign_sources:
-                    continue
-                clean_entries.append(entry)
-
-        if not clean_entries:
-            return entries
-
-        full_prompt = json.dumps(clean_entries)
-
-        pre_classify_request = JsonRequestOpenAI("search/prompt_pre_clasify.txt")
-        pre_classify_response = pre_classify_request.send_prompt(full_prompt)
-        print("Pre classify response:", pre_classify_response)
-        if not isinstance(pre_classify_response, dict) or not pre_classify_response:
-            return entries
-
-        """
-        title, id, source_url, source_title, is_dfi, source_is_foreign
-        """
-        valid_options = {
-            vo.name.lower(): vo.id for vo in ValidOption.objects.all()
-        }
-        # print("Valid options", valid_options)
-        for entry in entries:
-            # gnews_id = entry.get("id")
-            # if not gnews_id:
-            #     continue
-            prov_id = entry.get("prov_id")
-
-            valid_option = pre_classify_response.get(str(prov_id))
-            if valid_option is None or valid_option == "desconocido":
-                # print("Valid option not processed", valid_option)
-                continue
-            # print("valid final", prov_id, valid_options.get(valid_option))
-            entry["pre_valid_option"] = valid_options.get(valid_option)
-
-        return entries
-
-    def get_origin_by_domain(self, domain: str):
-        if domain.endswith(".mx"):
-            return SourceOrigin.objects.get(name="Nacional")
-        spanish_countries = [
-            'cr', 'cu', 'do', 'sv', 'gt', 'hn', 'ni', 'pa', 'ar', 'bo', 'cl',
-            'co', 'ec', 'py', 'pe', 'uy', 've', 'gq']
-        country_code = domain.split(".")[-1]
-        if country_code in spanish_countries:
-            return SourceOrigin.objects.get(name="Extranjera")
-        return None
-
-    def pre_classify_valid(self):
-        pass
-
-    def pre_classify_sources(self, pending_sources: dict):
-        equivalences = {
-            "mexican": "Nacional",
-            "international": "Internacional",
-            "foreign": "Extranjera",
-            "unknown": "Desconocido"
-        }
-        # origins_dict = {
-        #     origin.name: origin for origin in SourceOrigin.objects.all()
-        # }
-        # origins_dict = {
-        #     key: origins_dict.get(equivalences.get(key, key))
-        #     for key in origins_dict
-        # }
-        origins_dict = {}
-        for key, value in equivalences.items():
-            origin = SourceOrigin.objects.filter(name__iexact=value).first()
-            if origin:
-                origins_dict[key] = origin
-        user_prompt = ""
-        # print("Pending sources\n", pending_sources)
-        for source_url, values in pending_sources.items():
-            simple_url = source_url.split("//")[-1]
-            user_prompt += f"{values['id']}: {values['title']} ({simple_url})\n"
-        origin_request = JsonRequestOpenAI(
-            "source/prompt_origin.txt")
-        # print("User prompt\n", user_prompt)
-        origin_response = origin_request.send_prompt(user_prompt)
-        # print("Origin response\n", origin_response)
-        if not isinstance(origin_response, dict) or not origin_response:
-            return
-        new_foreign_sources = []
-        for source_id, classification in origin_response.items():
-            source_id = int(source_id)
-            if classification in ["unknown"]:
-                continue
-            if classification == "foreign":
-                new_foreign_sources.append(source_id)
-            source_id = int(source_id)
-            origin = origins_dict.get(classification)
-            if origin:
-                source = Source.objects.get(id=source_id)
-                source.source_origin = origin
-                source.save()
-            else:
-                print("Invalid classification", classification)
-        return new_foreign_sources
+        search_service = SearchService(
+            final_query, when, from_date, to_date, all_negative_words)
+        search_service.search()
+        return search_service.search_entries
 
     class Meta:
         verbose_name = 'Consulta'
