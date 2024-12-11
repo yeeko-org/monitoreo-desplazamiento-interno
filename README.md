@@ -34,11 +34,11 @@ La instalación de la libreria pygooglenews puede causar problemas, se recomiend
 
 ### Orden de ejecución de migración de datos:
 
-python .\manage.py  migrate
-python .\manage.py  runserver
+python manage.py  migrate
+python manage.py  runserver
 
-python .\manage.py  migrate_ps_schemas
+python manage.py  migrate_ps_schemas
 
-python .\manage.py  load_states_data
-python .\manage.py  load_municipios
-python .\manage.py  load_localidades
+python manage.py  load_states_data
+python manage.py  load_municipios
+python manage.py  load_localidades

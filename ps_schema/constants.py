@@ -58,8 +58,14 @@ all_collections = {
             "color": 'purple',
             "icon": 'insert_link',
             "all_filters": [
-                {"filter_name": "sources", "hidden": False},
-                {"filter_name": "valid_options", "hidden": False},
+                {
+                    "filter_name": "sources", "hidden": False,
+                    "is_multiple": True,
+                },
+                {
+                    "filter_name": "valid_options", "hidden": False,
+                    "filter_null": True,
+                },
             ],
         },
         {
@@ -84,6 +90,12 @@ all_collections = {
             "plural_name": "Fuentes de información",
             "model_name": "Source",
             "level": "category_subtype",
+            "all_filters": [
+                {
+                    "title": "Es scrapeable", "field": "has_content",
+                    "component": "TripleBooleanFilter",
+                },
+            ],
         },
     ],
     "geo": [

@@ -36,7 +36,7 @@ class SourceViewSet(BaseViewSet):
     queryset = Source.objects.all()\
         .prefetch_related('note_links')
     serializer_class = SourceCountSerializer
-    filterset_fields = ['source_origin']
+    filterset_fields = ['source_origin', 'has_content']
 
     def get_serializer_class(self):
         action_serializer = {

@@ -33,7 +33,7 @@ class NoteContentFilter(FilterSet):
 
 class NoteContentViewSet(ModelViewSet):
     queryset = NoteContent.objects.all()
-    serializer_class = NoteLinkAndContentSerializer
+    serializer_class = BasicNoteContentSerializer
     permission_classes = [IsAuthenticated]
 
     filterset_class = NoteContentFilter

@@ -80,14 +80,18 @@ def field_of_models(collection: Collection):
             final_field["verbose_name"] = field.verbose_name or field.name
         except AttributeError:
             pass
+        try:
+            final_field["column"] = field.column
+        except AttributeError:
+            pass
         if is_char:
             final_field["max_length"] = field.max_length
         # set related_name if exists
         # final_field["is_primary_key"] = field.primary_key
         if field.is_relation:
             try:
-                final_field["related_name"] = field.related_query_name()
-            except TypeError:
+                final_field["related_name"] = field.related_name
+            except AttributeError:
                 pass
             try:
                 meta = field.related_model._meta
