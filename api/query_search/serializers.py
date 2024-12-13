@@ -29,14 +29,14 @@ class SearchQuerySerializer(serializers.ModelSerializer):
 
 class SearchQueryFullSerializer(serializers.ModelSerializer):
 
-    note_links = serializers.SerializerMethodField(read_only=True)
+    # note_links = serializers.SerializerMethodField(read_only=True)
     apply_queries = ApplyQuerySerializer(many=True, read_only=True)
     query_words_soft = serializers.ReadOnlyField()
 
-    def get_note_links(self, obj):
-        return NoteLinkSerializer(
-            NoteLink.objects.filter(queries__search_query__id=obj.id),
-            many=True).data
+    # def get_note_links(self, obj):
+    #     return NoteLinkSerializer(
+    #         NoteLink.objects.filter(queries__search_query__id=obj.id),
+    #         many=True).data
 
     def create(self, validated_data):
         # save m2m fields

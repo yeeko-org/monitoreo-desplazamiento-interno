@@ -99,7 +99,7 @@ class SearchMixin:
                 try:
                     source_obj, source_obj_created = Source.objects.get_or_create(
                         main_url=source['href'],
-                        defaults={"name": source['title']}
+                        name=source['title'],
                     )
                     if source_obj_created:
                         new_sources.append(source_obj)
@@ -107,7 +107,7 @@ class SearchMixin:
                         # source_obj.save()
                 except Exception as e:
                     source_obj = Source.objects.filter(
-                        main_url=source['href']).first()
+                        main_url=source['href'], name=source['title']).first()
                 pre_link['source'] = source_obj.pk
                 note_link_serializer = NoteLinkSerializer(data=pre_link)
                 note_link_serializer.is_valid(raise_exception=True)
@@ -116,7 +116,7 @@ class SearchMixin:
 
             else:
                 source_obj = Source.objects.filter(
-                    main_url=source['href']).first()
+                    main_url=source['href'], name=source['title']).first()
                 if source_obj:
                     source_serializer = PreSourceSerializer(source_obj)
                     pre_link['source_full'] = source_serializer.data

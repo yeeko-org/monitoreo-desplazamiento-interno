@@ -26,7 +26,15 @@ class NoteLinkFullSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ApplySearchQuerySerializer(serializers.ModelSerializer):
+    def to_representation(self, value):
+        return value.search_query_id
+
+
 class NoteLinkSerializer(serializers.ModelSerializer):
+    search_queries = ApplySearchQuerySerializer(
+        many=True, read_only=True, source="queries")
+
     class Meta:
         model = NoteLink
         fields = "__all__"

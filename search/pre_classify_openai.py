@@ -1,4 +1,5 @@
 from typing import List
+from source.models import Source, SourceOrigin
 
 
 ORIGINS_EQUIVALENCES = {
@@ -8,9 +9,9 @@ ORIGINS_EQUIVALENCES = {
     "unknown": "Desconocido"
 }
 
-SPANISH_COUNTRIES = [
+SPANISH_COUNTRIES = (
     'cr', 'cu', 'do', 'sv', 'gt', 'hn', 'ni', 'pa', 'ar', 'bo', 'cl',
-    'co', 'ec', 'py', 'pe', 'uy', 've', 'gq']
+    'co', 'ec', 'py', 'pe', 'uy', 've', 'gq')
 
 
 class IsForeign(Exception):
@@ -22,7 +23,6 @@ class PreClassifyOpenAI:
     def __init__(
             self
     ):
-        from source.models import Source, SourceOrigin
         self.source_origin_nacional = SourceOrigin.objects\
             .get(name="Nacional")
         self.source_origin_foreign = SourceOrigin.objects\
@@ -30,27 +30,10 @@ class PreClassifyOpenAI:
         self.source_origin_unknown = SourceOrigin.objects\
             .get(name="Desconocido")
 
+        self.valid_name_sources = ["Nacional", "Internacional"]
+
         self.entries_for_openai = []
         self.pending_sources = {}
-        self.new_sources_ids = []
-        self.valid_origins = SourceOrigin.objects\
-            .filter(name__in=["Nacional", "Internacional"])\
-            .values_list("id", flat=True)
-
-        self.valid_sources = Source.objects\
-            .filter(source_origin__in=self.valid_origins)
-        self.valid_sources_dict = {
-            source.main_url: source for source in self.valid_sources}
-
-        self.unknown_sources = Source.objects\
-            .filter(source_origin__name="Desconocido")
-        self.unknown_dict = {
-            source.main_url: {"id": source.pk, "name": source.name}
-            for source in self.unknown_sources}
-
-        self.foreign_sources = Source.objects\
-            .filter(source_origin__name="Extranjera")\
-            .values_list("main_url", flat=True)
 
     def get_pre_classify_response(self, entries: List[dict]):
         from search.open_ai_request import OpenAIRequest
@@ -63,35 +46,35 @@ class PreClassifyOpenAI:
                 continue
 
         return OpenAIRequest.get_pre_classify_response(
-            self._clean_entries_for_openia())
+            self._clean_entries_for_openai())
 
-    def search_source(self, gnews_source_url: str, gnews_source_title: str):
-        from source.models import Source
-        source_dict = {
-            "title": gnews_source_title,
-            "main_url": gnews_source_url,
-        }
+    def search_source(
+            self, gnews_source_url: str, gnews_source_title: str,
+            source_obj: Source = None):
+
         origin = self.get_origin_by_domain(gnews_source_url)
-        if source_obj := self.unknown_dict.get(gnews_source_url):
-            source_dict["id"] = source_obj["id"]
-        else:
-            new_source, created = Source.objects.get_or_create(
+
+        if source_obj and origin:
+            source_obj.source_origin = origin
+            source_obj.save()
+        if not source_obj:
+            source_obj, _ = Source.objects.get_or_create(
                 name=gnews_source_title,
                 main_url=gnews_source_url,
+                source_origin=origin or self.source_origin_unknown
             )
-            if created:
-                self.new_sources_ids.append(new_source.pk)
-            source_dict["id"] = new_source.pk
-            if origin:
-                new_source.source_origin = origin
-                new_source.save()
-            else:
-                self.pending_sources.setdefault(
-                    gnews_source_url, source_dict)
-        if origin and origin.name == "Extranjera":
+
+        if not origin:
+            source_dict = {
+                "title": gnews_source_title,
+                "main_url": gnews_source_url,
+                "id": source_obj.pk
+            }
+            self.pending_sources.setdefault(gnews_source_url, source_dict)
+        elif origin == self.source_origin_foreign:
             raise IsForeign
 
-        return source_dict["id"]
+        return source_obj.pk
 
     def _pre_classify_entry(self, entry_data: dict, temporal_entry_id: int):
         from note.models import NoteLink
@@ -103,17 +86,31 @@ class PreClassifyOpenAI:
         gnews_url = entry_data.get("link")
         gnews_source_title = entry_data.get("source", {}).get("title")
         gnews_source_url = entry_data.get("source", {}).get("href")
+        try:
+            source_saved = Source.objects\
+                .get(main_url=gnews_source_url, name=gnews_source_title)
+            if source_saved.source_origin == self.source_origin_foreign:
+                raise IsForeign
+            elif source_saved.source_origin.name in self.valid_name_sources:
+                pass
+            else:
+                self.search_source(
+                    gnews_source_url, gnews_source_title, source_saved)
+            new_entry["source_id"] = source_saved.pk
 
-        if gnews_source_url in self.foreign_sources:
-            return
-
-        if gnews_source_url not in self.valid_sources_dict:
+        except Source.DoesNotExist:
             new_entry["source_id"] = self.search_source(
                 gnews_source_url, gnews_source_title)
+        except Source.MultipleObjectsReturned:
+            sources_saved = Source.objects\
+                .filter(main_url=gnews_source_url, name=gnews_source_title)
+            for source_saved in sources_saved:
+                print("Multiple sources", source_saved.main_url, source_saved.name)
+            raise
 
         note_link = NoteLink.objects.filter(gnews_url=gnews_url).first()
         if note_link:
-            if note_link.valid_option or note_link.pre_is_dfi is not None:
+            if note_link.valid_option or note_link.pre_valid_option:
                 return
 
         new_entry.update({
@@ -122,15 +119,10 @@ class PreClassifyOpenAI:
         })
         self.entries_for_openai.append(new_entry)
 
-    def _clean_entries_for_openia(self):
+    def _clean_entries_for_openai(self):
         clean_entries = []
         if self.pending_sources:
             new_foreign_sources = self._pre_classify_sources()
-            # print("New foreign sources", new_foreign_sources)
-            # self.entries_for_openai = [
-            #     entry for entry in self.entries_for_openai
-            #     if entry.get("source_id") not in new_foreign_sources
-            # ]
             for entry in self.entries_for_openai:
                 source_id = entry.get("source_id")
                 if source_id and source_id in new_foreign_sources:
@@ -141,21 +133,12 @@ class PreClassifyOpenAI:
     def get_origin_by_domain(self, domain: str):
         if domain.endswith(".mx"):
             return self.source_origin_nacional
-
-        country_code = domain.split(".")[-1]
-        if country_code in SPANISH_COUNTRIES:
+        if domain.endswith(SPANISH_COUNTRIES):
             return self.source_origin_foreign
         return None
 
     def _get_pre_classify_origins_dict(self):
         from source.models import SourceOrigin
-        # origins_dict = {
-        #     origin.name: origin for origin in SourceOrigin.objects.all()
-        # }
-        # origins_dict = {
-        #     key: origins_dict.get(equivalences.get(key, key))
-        #     for key in origins_dict
-        # }
         origins_dict = {}
         for key, value in ORIGINS_EQUIVALENCES.items():
             origin = SourceOrigin.objects.filter(name__iexact=value).first()

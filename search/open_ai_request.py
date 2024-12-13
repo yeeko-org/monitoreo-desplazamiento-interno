@@ -1,5 +1,4 @@
 import json
-
 from utils.open_ai import JsonRequestOpenAI
 
 
@@ -18,7 +17,6 @@ class OpenAIRequest:
         pre_classify_request = JsonRequestOpenAI(
             "search/prompt_pre_clasify.txt")
         pre_classify_response = pre_classify_request.send_prompt(full_prompt)
-        print("Pre classify response:", pre_classify_response)
         if isinstance(pre_classify_response, dict):
             return pre_classify_response
 

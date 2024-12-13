@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
 from django_filters import (
-    FilterSet, DateFilter, CharFilter, NumberFilter, BooleanFilter)
+    FilterSet, DateFilter, CharFilter, NumberFilter, BooleanFilter,
+    ChoiceFilter, ModelChoiceFilter, BaseInFilter
+)
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from api.common_views import BaseViewSet
@@ -13,6 +15,7 @@ from api.note.serializers import (
     BasicNoteContentSerializer, NoteLinkFullSerializer,
     NoteLinkSpecialSerializer)
 from note.models import NoteLink, NoteContent
+from source.models import SourceOrigin
 from utils.open_ai import JsonRequestOpenAI
 from api.pagination import CustomPagination
 
@@ -22,8 +25,10 @@ class NoteContentFilter(FilterSet):
     # start_date = DateFilter(field_name='date', lookup_expr='gte')
     # end_date = DateFilter(field_name='date', lookup_expr='lte')
     status_register = CharFilter(field_name='status_register__name')
+    # source_origin = NumberFilter(
+    #     field_name='note_link__source__source_origin', lookup_expr='exact')
     source_origin = NumberFilter(
-        field_name='note_link__source__source_origin', lookup_expr='exact')
+        field_name='note_link__source__source_origin', lookup_expr='in')
     source = NumberFilter(field_name='note_link__source', lookup_expr='exact')
 
     class Meta:
@@ -67,8 +72,9 @@ class NoteLinkFilter(FilterSet):
     start_date = DateFilter(field_name='date', lookup_expr='gte')
     end_date = DateFilter(field_name='date', lookup_expr='lte')
     status_register = CharFilter(field_name='status_register__name')
-    source_origin = NumberFilter(
-        field_name='source__source_origin', lookup_expr='exact')
+    source_origin = BaseInFilter(
+        field_name='source__source_origin', lookup_expr='in')
+
     valid_option_null = BooleanFilter(
         field_name='valid_option', lookup_expr='isnull', exclude=False)
 
@@ -94,6 +100,13 @@ class NoteLinkViewSet(ModelViewSet):
             "manual_create_note_content": NoteLinkFullSerializer,
         }
         return actions.get(self.action, self.serializer_class)
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        query_params = self.request.query_params
+        print("Query params", query_params)
+
+        return queryset
 
     @action(detail=True, methods=["patch"])
     def get_note_content(self, request, pk=None):

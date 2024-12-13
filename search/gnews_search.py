@@ -17,11 +17,11 @@ class GNewsSearch:
             from_date: Optional[date], to_date: Optional[date]
     ):
 
-        if not (self.when or (from_date and to_date)):
+        if not (when or (from_date and to_date)):
             raise ValueError("No dates provided")
 
-        self.gnews_query = gnews_query
         self.when = when
+        self.gnews_query = gnews_query
         self.from_date = from_date
         self.to_date = to_date
         self.search_entries = {}
@@ -49,6 +49,7 @@ class GNewsSearch:
         all_links_data = []
         last_feed = None
         errors = []
+
         for from_date_r, to_date_r in range_dates:
 
             search_kwargs["from_"] = from_date_r.strftime("%Y-%m-%d")
@@ -77,7 +78,8 @@ class GNewsSearch:
             self.when = f"{self.when}d"
         except ValueError:
             pass
-        search_kwargs = {"self.when": self.when or "1d"}
+        search_kwargs = {"when": self.when or "1d"}
+        print("search_kwargs", search_kwargs)
         gn = YeekoGoogleNews("es", "MX")
         print("Searching...\n", self.gnews_query, "\n", search_kwargs)
         self.search_entries = gn.search(

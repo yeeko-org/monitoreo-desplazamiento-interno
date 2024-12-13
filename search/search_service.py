@@ -65,16 +65,10 @@ class SearchService:
         valid_options = {
             vo.name.lower(): vo.pk for vo in ValidOption.objects.all()
         }
-        # print("Valid options", valid_options)
         for entry in self.search_entries["entries"]:
-            # gnews_id = entry.get("id")
-            # if not gnews_id:
-            #     continue
             prov_id = entry.get("prov_id")
 
             valid_option = pre_classify_response.get(str(prov_id))
             if valid_option is None or valid_option == "desconocido":
-                # print("Valid option not processed", valid_option)
                 continue
-            # print("valid final", prov_id, valid_options.get(valid_option))
             entry["pre_valid_option"] = valid_options.get(valid_option)

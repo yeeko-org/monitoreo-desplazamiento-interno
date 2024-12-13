@@ -39,23 +39,18 @@ class NoteLink(models.Model):
     gnews_url = models.URLField(max_length=1500, unique=True)
     real_url = models.URLField(max_length=800, blank=True, null=True)
     title = models.TextField()
-    # description = models.TextField()
     source = models.ForeignKey(
         Source, on_delete=models.CASCADE, related_name='note_links')
     published_at = models.DateTimeField(blank=True, null=True)
     queries = models.ManyToManyField(
         ApplyQuery, related_name='note_links', blank=True)
     gnews_entry = models.JSONField(blank=True, null=True)
-    is_dfi = models.BooleanField(blank=True, null=True)
-    is_internal_dis = models.CharField(
-        choices=INTERNAL_DIS_CHOICES, max_length=10, blank=True, null=True)
     valid_option = models.ForeignKey(
         ValidOption, on_delete=models.CASCADE, blank=True, null=True,
         related_name='valid_option')
     pre_valid_option = models.ForeignKey(
         ValidOption, on_delete=models.CASCADE, blank=True, null=True,
         related_name='pre_valid_option')
-    pre_is_dfi = models.BooleanField(blank=True, null=True)
 
     note_contents: models.QuerySet["NoteContent"]
 

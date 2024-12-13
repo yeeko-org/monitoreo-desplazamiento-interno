@@ -228,10 +228,11 @@ class ApplyQuery(models.Model):
             try:
                 source, _ = Source.objects.get_or_create(
                     main_url=source_url,
-                    defaults={"name": source_name}
+                    name=source_name
                 )
             except Exception as e:
-                source = Source.objects.filter(main_url=source_url).first()
+                source = Source.objects.filter(
+                    main_url=source_url, name=source_name).first()
             sources[source_name] = source
         else:
             source = sources[source_name]
