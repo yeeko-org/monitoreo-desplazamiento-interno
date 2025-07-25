@@ -7,7 +7,7 @@ from django.conf import settings
 import tiktoken
 
 TOKENS_MAX_LENGTH = getattr(settings, 'OPENAI_TOKENS_MAX_LENGTH', 128000)
-MODEL_NAME = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o')
+MODEL_NAME = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o-2024-08-06')
 
 
 def format_prompt_text(text: str, has_pipe: bool = False):
@@ -31,17 +31,17 @@ class JsonRequestOpenAI:
         openai_api_key = getattr(settings, 'OPENAI_API_KEY', None)
 
         self.client = openai.OpenAI(api_key=openai_api_key)
-        self.engine = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o')
+        self.engine = getattr(settings, 'OPENAI_ENGINE', 'gpt-4o-2024-08-06')
         self.messages: list[dict] = []
         self.to_json = to_json
         self.response = None
         with open(prompt_path, "r", encoding="utf-8") as file:
             init_prompt = file.read()
         msgs = init_prompt.split("\n====\n")
-        self.build_msg(msgs[0], "system")
+        self._build_msg(msgs[0], "system")
         for idx, msg in enumerate(msgs[1:]):
             role = "user" if idx % 2 == 0 else "assistant"
-            self.build_msg(msg, role)
+            self._build_msg(msg, role)
         self.first_example = ""
         self.first_response = {}
         self.prompt = ""
@@ -49,7 +49,7 @@ class JsonRequestOpenAI:
     def send_prompt(self, new_prompt):
         if not new_prompt:
             return None
-        self.build_msg(new_prompt, "user")
+        self._build_msg(new_prompt, "user")
         response_format = {"type": "json_object"} \
             if self.to_json else None
         try:
@@ -80,7 +80,7 @@ class JsonRequestOpenAI:
         else:
             return response.choices[0].message.content
 
-    def build_msg(self, prompt, role="user"):
+    def _build_msg(self, prompt, role="user"):
         # print("-"*50)
         # print(f"role: {role}\nprompt: {prompt}\n")
         if len(prompt) > 9000:

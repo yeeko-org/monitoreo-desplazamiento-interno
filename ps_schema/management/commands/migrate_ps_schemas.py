@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from ps_schema.initial_data import (
-    InitLevels, InitCollections, InitCollectionLinks, InitFilterGroups)
+    InitLevels, InitCollections, InitFilterGroups)
 
 
 class Command(BaseCommand):
@@ -11,5 +11,5 @@ class Command(BaseCommand):
         InitLevels()
         InitCollections()
         InitFilterGroups()
-        InitCollectionLinks()
+        # InitCollectionLinks()
         print('Datos iniciales de ps_schema cargados')

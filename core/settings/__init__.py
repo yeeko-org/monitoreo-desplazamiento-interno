@@ -10,20 +10,21 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from utils.get_env import getenv_bool, getenv_int, getenv_list
+from core.settings.get_env import getenv_bool, getenv_int, getenv_list
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))))
 
 
 # -----------------------Default database configuration-----------------------
 POSTRGRESQL_DB = os.getenv('POSTRGRESQL_DB', False)
 DATABASE_NAME = os.getenv("DATABASE_NAME", "db.sqlite3")
+print("DATABASE_NAME:", DATABASE_NAME)
 DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA")
 if POSTRGRESQL_DB:
     default_database = {
@@ -37,7 +38,7 @@ if POSTRGRESQL_DB:
 else:
     default_database = {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / DATABASE_NAME
+        'NAME': os.path.join(BASE_DIR, DATABASE_NAME)
     }
 
 
@@ -57,8 +58,9 @@ DATABASES = {
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-bywcb-()pkgcme-*kc)=@")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_TOKENS_MAX_LENGTH = getenv_int("OPENAI_TOKENS_MAX_LENGTH", 128000)
-OPENAI_ENGINE = os.getenv("OPENAI_ENGINE", "gpt-4o")
+OPENAI_ENGINE = os.getenv("OPENAI_ENGINE", "gpt-4o-2024-08-06")
 
 
 ALLOWED_HOSTS = getenv_list("ALLOWED_HOSTS", ["*"])
@@ -127,10 +129,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
+TEMPLATE_PATH = os.path.join(BASE_DIR, os.getenv("TEMPLATE_PATH", 'templates'))
+
+# BASE_DIR / 'templates'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [TEMPLATE_PATH],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

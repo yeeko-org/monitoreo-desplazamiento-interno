@@ -140,8 +140,8 @@ filter_groups = [
         "filter_collections": [
             "news-note_link"
         ],
-        "category_type": "source_origin",
-        "category_subtype": "source",
+        "category_type": "source-source_origin",
+        "category_subtype": "source-source",
     },
     {
         "key_name": "word_lists",
@@ -151,8 +151,8 @@ filter_groups = [
         "filter_collections": [
             "note_link",
         ],
-        "category_type": "cluster",
-        "category_subtype": "word_list",
+        "category_type": "search-cluster",
+        "category_subtype": "search-word_list",
         # "category_subtype": "news-cluster",
     },
     {
@@ -163,7 +163,7 @@ filter_groups = [
         "filter_collections": [
             "note_link",
         ],
-        "category_subtype": "valid_option",
+        "category_subtype": "note-valid_option",
     },
     # {
     #     "key_name": "states",
@@ -185,101 +185,3 @@ filter_groups = [
     #     "category_subtype": "geo-locality",
     # },
 ]
-
-collection_links = [
-    {
-        "parent": "source_origin",
-        "child": "source",
-        "link_type": "grouper",
-    },
-    {
-        "parent": "source",
-        "child": "note_link",
-        "link_type": "category",
-        "is_mandatory": True,
-    },
-    {
-        "parent": "note_link",
-        "child": "note_content",
-        "link_type": "relational",
-        "is_mandatory": True,
-    },
-    {
-        "parent": "valid_option",
-        "child": "note_link",
-        "link_type": "category",
-        "is_mandatory": True,
-    },
-    {
-        "parent": "search_query",
-        "child": "apply_query",
-        "link_type": "relational",
-        "is_mandatory": True,
-    },
-    {
-        "parent": "apply_query",
-        "child": "note_link",
-        "link_type": "relational",
-        "is_mandatory": True,
-    },
-    # {
-    #     "parent": "mention",
-    #     "child": "participant",
-    #     "link_type": "relational",
-    #     "is_multiple": True,
-    #     "is_mandatory": True,
-    # },
-    {
-        "parent": "cluster",
-        "child": "word_list",
-        "link_type": "category",
-        "is_mandatory": True,
-    },
-    {
-        "parent": "word_list",
-        "child": "search_query",
-        "link_type": "category",
-        "is_mandatory": True,
-        "is_multiple": True,
-    },
-    # {
-    #     "parent": "state",
-    #     "child": "municipality",
-    #     "link_type": "grouper",
-    #     "filter_group": "geographicals",
-    #     "is_mandatory": True,
-    # },
-    # {
-    #     "parent": "municipality",
-    #     "child": "locality",
-    #     "link_type": "grouper",
-    #     "filter_group": "geographicals",
-    #     "is_mandatory": True,
-    # },
-]
-
-
-def send_many_requests():
-    import requests
-    import json
-    import time
-
-    error_ids = [2107]
-    # 2075
-    all_ids = [
-        2107, 2005, 1902, 1896, 1833, 1832, 1737, 1571, 1501,
-        1450, 1405, 1270, 797, 760, 718, 49]
-    url = "https://ocsa.ibero.mx/api/rpc/approve_draft"
-    headers = {
-        'Content-Type': 'application/json',
-        "Authorization": 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoib2Nzd2ViYWRtaW4iLCJlbWFpbCI6InNlYmFzdGlhbi5vbHZlcmFAaWJlcm8ubXgifQ.boDDaOPQXa9Q3LMohHXQvuw85fR5rEKPcMxr4nqzGms'
-    }
-
-    for elem_id in all_ids:
-        payload = {'_id': elem_id}
-        with requests.Session() as session:
-            response = session.post(
-                url, headers=headers, data=json.dumps(payload))
-            if response.text:
-                print(f"elem_id: {elem_id} | response: {response.text}")
-        time.sleep(35)

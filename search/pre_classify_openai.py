@@ -33,7 +33,7 @@ class PreClassifyOpenAI:
         self.valid_name_sources = ["Nacional", "Internacional"]
 
         self.entries_for_openai = []
-        self.pending_sources = {}
+        self.pending_sources: dict = {}
 
     def get_pre_classify_response(self, entries: List[dict]):
         from search.open_ai_request import OpenAIRequest
@@ -147,6 +147,31 @@ class PreClassifyOpenAI:
         return origins_dict
 
     def _pre_classify_sources(self):
+        from source.models import Source
+        from search.open_ai_request import GeminiRequest, PreClassify
+
+        gemini_response: PreClassify = GeminiRequest\
+            .get_pre_classify_origin_response(self.pending_sources)
+        fields = PreClassify.model_fields
+        for category in fields:
+            origin_name = ORIGINS_EQUIVALENCES.get(category, None)
+            origin_obj = SourceOrigin.objects\
+                .filter(name__iexact=origin_name).first()
+            if not origin_obj:
+                print(f"Origin '{origin_name}' not found.")
+                continue
+            for source_id in getattr(gemini_response, category, []):
+                source_id = int(source_id)
+                source = Source.objects.filter(id=source_id).first()
+                if not source:
+                    print(f"Source with ID {source_id} not found.")
+                    continue
+                source.source_origin = origin_obj
+                source.save()
+
+        return gemini_response.foreign
+
+    def _old_pre_classify_sources(self):
         from source.models import Source
         from search.open_ai_request import OpenAIRequest
 

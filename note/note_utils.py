@@ -80,7 +80,8 @@ class GetNoteContent:
             error = "No se pudo obtener el contenido vía BeautifulSoup"
             raise HttpResponseError(errors=[error])
 
-        full_prompt = f"The title previously mentioned is: {self.note_link.title}\n"
+        full_prompt = (f"The title previously mentioned is: "
+                       f"{self.note_link.title}\n")
         full_prompt += self.full_html\
             .encode("utf-8", errors="ignore")\
             .decode("utf-8")

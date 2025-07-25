@@ -43,31 +43,29 @@ class CatalogsView(APIView):
             # "involved_roles": InvolvedRoleSerializer(
             #     InvolvedRole.objects.all(), many=True).data,
 
-            "sources": SourceSerializer(
+            "source": SourceSerializer(
                 Source.objects.all(), many=True).data,
-            "source_origins": SourceOriginSerializer(
+            "source_origin": SourceOriginSerializer(
                 SourceOrigin.objects.all(), many=True).data,
-            "clusters": ClusterSerializer(
+            "cluster": ClusterSerializer(
                 Cluster.objects.all(), many=True).data,
-            "valid_options": ValidOptionSerializer(
+            "valid_option": ValidOptionSerializer(
                 ValidOption.objects.all(), many=True).data,
 
-            "word_lists": WordListSerializer(
+            "word_list": WordListSerializer(
                 WordList.objects.all(), many=True).data,
-            "search_queries": SearchQuerySerializer(
+            "search_query": SearchQuerySerializer(
                 SearchQuery.objects.all(), many=True).data,
 
             "status_control": StatusControlSerializer(
                 StatusControl.objects.all(), many=True).data,
-            "states": StateListSerializer(
+            "state": StateListSerializer(
                 State.objects.all(), many=True).data,
 
             "levels": LevelSerializer(
                 Level.objects.all(), many=True).data,
             "collections": CollectionSerializer(
                 Collection.objects.all(), many=True).data,
-            "collection_links": CollectionLinkSerializer(
-                CollectionLink.objects.all(), many=True).data,
             "filter_groups": FilterGroupSerializer(
                 FilterGroup.objects.all(), many=True).data,
         }

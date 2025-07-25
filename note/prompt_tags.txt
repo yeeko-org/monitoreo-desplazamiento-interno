@@ -20,7 +20,7 @@ Give me, at the end, only one attribute called "message" with the errors or prob
 
 Finally, give me an attribute called "has_content" with a boolean value indicating if the key tags to extract the information of content are available in the page.
 
-NOTE: the HTML content could be cutted.
+NOTE: the HTML content that I send you could be cutted.
 
 ====
 
