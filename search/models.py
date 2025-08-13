@@ -154,11 +154,8 @@ class SearchQuery(models.Model):
             self.negative_words.all(), union="",
             funtion="get_negative_query", include_soft=True)
 
-    def search(
-            self, when: Optional[Any], from_date: Optional[date],
-            to_date: Optional[date]
-    ):
-        from search.search_service import SearchService
+    def get_final_query(self):
+
         if self.use_manual_query:
             if not self.manual_query:
                 raise ValueError("Manual query is empty")
@@ -174,14 +171,10 @@ class SearchQuery(models.Model):
             all_negative_words.extend(
                 word_list.get_all_words(
                     enclose_sentences=False, include_soft=True))
-
         all_negative_words = [
             word.strip().lower() for word in all_negative_words if word.strip()]
 
-        search_service = SearchService(
-            final_query, when, from_date, to_date, all_negative_words)
-        search_service.search()
-        return search_service.search_entries
+        return final_query, all_negative_words
 
     class Meta:
         verbose_name = 'Consulta'
@@ -202,53 +195,6 @@ class ApplyQuery(models.Model):
     has_errors = models.BooleanField(default=False)
     errors = models.JSONField(blank=True, null=True)
     last_feed = models.JSONField(blank=True, null=True)
-
-    def search_and_save_entries(self):
-        links_data = self.search_query.search(
-            None, self.from_date, self.to_date)
-        entries = links_data.get("entries", [])
-
-        sources = {}
-        created_count = 0
-        for entry in entries:
-            note_link, is_created = self.save_entry(entry, sources)
-            if is_created:
-                created_count += 1
-
-        return {
-            "created": created_count,
-            "total": len(entries)
-        }
-
-    def save_entry(self, entry: dict, sources: dict):
-        from note.models import NoteLink
-        source_name = entry.get("source", {}).get("title")
-        if source_name not in sources:
-            source_url = entry.get("source", {}).get("href")
-            try:
-                source, _ = Source.objects.get_or_create(
-                    main_url=source_url,
-                    name=source_name
-                )
-            except Exception as e:
-                source = Source.objects.filter(
-                    main_url=source_url, name=source_name).first()
-            sources[source_name] = source
-        else:
-            source = sources[source_name]
-
-        note_link, is_created = NoteLink.objects.get_or_create(
-            gnews_url=entry.get("link"),
-            defaults=dict(
-                title=entry.get("title"),
-                description=entry.get("summary"),
-                source=source,
-                published_at=parse_gmt_date_list(
-                    entry.get("published_parsed"))
-            )
-        )
-        note_link.queries.add(self)
-        return note_link, is_created
 
     def add_errors(self, errors: Union[str, List[str]], save=True):
         if isinstance(errors, str):
@@ -273,3 +219,4 @@ class ApplyQuery(models.Model):
     class Meta:
         verbose_name = 'Aplicación de consulta'
         verbose_name_plural = 'Aplicaciones de consulta'
+        ordering = ['-from_date']

@@ -11,7 +11,7 @@ class SourceAdmin(admin.ModelAdmin):
 
 @admin.register(SourceOrigin)
 class SourceOriginAdmin(admin.ModelAdmin):
-    list_display = ('name', 'old_name')
+    list_display = ('name', 'old_name', 'in_scope')
 
 
 @admin.register(SourceMethod)

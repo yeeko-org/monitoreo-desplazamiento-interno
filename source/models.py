@@ -13,7 +13,7 @@ class SourceOrigin(models.Model):
     old_name = models.CharField(max_length=100, blank=True, null=True)
     color = models.CharField(max_length=20, blank=True, null=True)
     order = models.SmallIntegerField(default=5)
-    in_scope = models.BooleanField(default=False)
+    in_scope = models.BooleanField(blank=True, null=True)
 
     def __str__(self):
         return self.name

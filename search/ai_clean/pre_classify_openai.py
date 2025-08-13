@@ -1,5 +1,6 @@
 from typing import List
 from source.models import Source, SourceOrigin
+from search.ai_clean.open_ai_request import GeminiRequest, PreClassify
 
 
 ORIGINS_EQUIVALENCES = {
@@ -15,6 +16,10 @@ SPANISH_COUNTRIES = (
 
 
 class IsForeign(Exception):
+    pass
+
+
+class FindOrigin:
     pass
 
 
@@ -35,18 +40,18 @@ class PreClassifyOpenAI:
         self.entries_for_openai = []
         self.pending_sources: dict = {}
 
-    def get_pre_classify_response(self, entries: List[dict]):
-        from search.open_ai_request import OpenAIRequest
+    def get_pre_classify_response(self, all_entries: List[dict]):
+        from search.ai_clean.open_ai_request import OpenAIRequest
 
-        for current_id, entry_data in enumerate(entries, 1):
+        for current_id, entry_data in enumerate(all_entries, 1):
             entry_data["prov_id"] = current_id
             try:
                 self._pre_classify_entry(entry_data, current_id)
             except IsForeign:
                 continue
 
-        return OpenAIRequest.get_pre_classify_response(
-            self._clean_entries_for_openai())
+        clean_entries = self._get_valid_entries_for_openai()
+        return OpenAIRequest.get_pre_classify_response(clean_entries)
 
     def search_source(
             self, gnews_source_url: str, gnews_source_title: str,
@@ -96,11 +101,12 @@ class PreClassifyOpenAI:
             else:
                 self.search_source(
                     gnews_source_url, gnews_source_title, source_saved)
-            new_entry["source_id"] = source_saved.pk
+            new_entry["source_id"] = source_saved.id
 
         except Source.DoesNotExist:
-            new_entry["source_id"] = self.search_source(
+            source_id = self.search_source(
                 gnews_source_url, gnews_source_title)
+            new_entry["source_id"] = source_id
         except Source.MultipleObjectsReturned:
             sources_saved = Source.objects\
                 .filter(main_url=gnews_source_url, name=gnews_source_title)
@@ -119,10 +125,12 @@ class PreClassifyOpenAI:
         })
         self.entries_for_openai.append(new_entry)
 
-    def _clean_entries_for_openai(self):
+    def _get_valid_entries_for_openai(self):
         clean_entries = []
+        new_sources = self._pre_classify_sources()
         if self.pending_sources:
-            new_foreign_sources = self._pre_classify_sources()
+
+            new_foreign_sources = new_sources.foreign
             for entry in self.entries_for_openai:
                 source_id = entry.get("source_id")
                 if source_id and source_id in new_foreign_sources:
@@ -147,15 +155,22 @@ class PreClassifyOpenAI:
         return origins_dict
 
     def _pre_classify_sources(self):
-        from source.models import Source
-        from search.open_ai_request import GeminiRequest, PreClassify
+        if not self.pending_sources:
+            print("No pending sources to pre-classify.")
+            return PreClassify()
 
         gemini_response: PreClassify = GeminiRequest\
             .get_pre_classify_origin_response(self.pending_sources)
+        self._save_gemini_sources_response(gemini_response)
+
+        return gemini_response
+
+    def _save_gemini_sources_response(self, gemini_response: PreClassify):
+
         fields = PreClassify.model_fields
         for category in fields:
             origin_name = ORIGINS_EQUIVALENCES.get(category, None)
-            origin_obj = SourceOrigin.objects\
+            origin_obj = SourceOrigin.objects \
                 .filter(name__iexact=origin_name).first()
             if not origin_obj:
                 print(f"Origin '{origin_name}' not found.")
@@ -168,32 +183,3 @@ class PreClassifyOpenAI:
                     continue
                 source.source_origin = origin_obj
                 source.save()
-
-        return gemini_response.foreign
-
-    def _old_pre_classify_sources(self):
-        from source.models import Source
-        from search.open_ai_request import OpenAIRequest
-
-        origins_dict = self._get_pre_classify_origins_dict()
-        origin_response = OpenAIRequest.get_pre_classify_origin_response(
-            self.pending_sources)
-        if not origin_response:
-            return
-
-        new_foreign_sources = []
-        for source_id, classification in origin_response.items():
-            source_id = int(source_id)
-            if classification in ["unknown"]:
-                continue
-            if classification == "foreign":
-                new_foreign_sources.append(source_id)
-            source_id = int(source_id)
-            origin = origins_dict.get(classification)
-            if origin:
-                source = Source.objects.get(id=source_id)
-                source.source_origin = origin
-                source.save()
-            else:
-                print("Invalid classification", classification)
-        return new_foreign_sources

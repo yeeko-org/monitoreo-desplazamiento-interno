@@ -30,10 +30,3 @@ class ApplyQueryAdmin(admin.ModelAdmin):
     list_display = ('search_query', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('search_query__name',)
-
-    def save_model(self, request, obj: ApplyQuery, form, change):
-        obj.save()
-        results = obj.search_and_save_entries()
-        messages.success(
-            request, f"Se encontraron {results['total']} "
-            f"resultados, se crearon {results['created']} Note Links")

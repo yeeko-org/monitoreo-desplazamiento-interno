@@ -14,127 +14,83 @@ from api.query_search.serializers import (
 from api.note.serializers import (
     NoteLinkFullSerializer, NoteLinkSerializer)
 from api.catalogs.serializers import SourceSerializer, PreSourceSerializer
-from typing import Optional
+from search.gnews_search import GNewsSearch
+from typing import List, Optional, Any, Union
+from datetime import date
 
 
 class SearchMixin:
 
     apply_query: Optional[ApplyQuery] = None
     built_note_links: list = []
+    search_service: GNewsSearch = None
 
     @abstractmethod
-    def get_search_query(self) -> SearchQuery:
-        raise NotImplementedError
+    def add_link_full_data(self, note_link: NoteLink):
+        raise NotImplementedError(
+            "add_link_full_data method must be implemented in the subclass")
 
     @abstractmethod
-    def get_when_data(self):
-        raise NotImplementedError
+    def save_note_link(self, source_data: dict, pre_link: dict):
+        raise NotImplementedError(
+            "save_note_link method must be implemented in the subclass")
 
-    def get_link_serializer(self, link_instance):
-        if self.apply_query:
-            link_instance.queries.add(self.apply_query)
-        note_link_data = NoteLinkFullSerializer(link_instance).data
-        self.built_note_links.append(note_link_data)
+    def search_note_data(
+            self, search_query: SearchQuery,
+            when: Optional[Any] = None, from_date: Optional[date] = None,
+            to_date: Optional[date] = None
+    ):
 
-    def search_data(self):
-        from utils.date_time import parse_gmt_date_list
-        search_query = self.get_search_query()
-        when_data = self.get_when_data()
+        final_query, all_negative_words = search_query.get_final_query()
 
-        links_data = search_query.search(**when_data)
-        search_entries = links_data['entries']
-        feed = links_data.get('feed')
-        errors = links_data.get('errors', [])
-
-        if self.apply_query:
-            save_apply_query = False
-            if feed:
-                self.apply_query.last_feed = feed
-                save_apply_query = True
-
-            if errors:
-                self.apply_query.add_errors(errors, save=False)
-                save_apply_query = True
-
-            if save_apply_query:
-                self.apply_query.save()
+        self.search_service = GNewsSearch(
+            final_query, when, from_date, to_date, all_negative_words)
+        self.search_service.search_in_gnews()
 
         self.built_note_links = []
-        new_sources = []
 
-        for entry in search_entries:
+        for entry in self.search_service.search_entries:
 
             gnews_url = entry.pop('link')
-            note_link_obj = NoteLink.objects.filter(
-                gnews_url=gnews_url).first()
+            note_link_obj = NoteLink.objects\
+                .filter(gnews_url=gnews_url)\
+                .first()
             if note_link_obj:
-                self.get_link_serializer(note_link_obj)
+                self.add_link_full_data(note_link_obj)
                 continue
 
             title = entry.pop('title')
             source = entry.pop('source')
             entry['gnews_source'] = source
-            pre_valid_option = entry.pop('pre_valid_option', None)
+            # pre_valid_option = entry.pop('pre_valid_option', None)
             pre_link = {
                 "gnews_entry": entry,
                 "gnews_url": gnews_url,
                 "note_contents": [],
-                "pre_valid_option": pre_valid_option,
+                "published_at": self._date_to_str(entry),
+                # "pre_valid_option": pre_valid_option,
             }
             split = title.rsplit(' - ', 1)
             if len(split) == 2:
                 pre_link['title'] = split[0]
             else:
                 pre_link['title'] = title
-            published_parsed = entry.pop('published_parsed')
-            published_at = parse_gmt_date_list(published_parsed)
-            if published_at:
-                published_at = published_at.strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                published_at = None
 
-            pre_link["published_at"] = published_at
+            self.save_note_link(source, pre_link)
 
-            if self.apply_query:
-                try:
-                    source_obj, source_obj_created = Source.objects.get_or_create(
-                        main_url=source['href'],
-                        name=source['title'],
-                    )
-                    if source_obj_created:
-                        new_sources.append(source_obj)
-                        # source_obj.pre_source_origin = source_obj.source_origin
-                        # source_obj.save()
-                except Exception as e:
-                    source_obj = Source.objects.filter(
-                        main_url=source['href'], name=source['title']).first()
-                pre_link['source'] = source_obj.pk
-                note_link_serializer = NoteLinkSerializer(data=pre_link)
-                note_link_serializer.is_valid(raise_exception=True)
-                note_link_obj = note_link_serializer.save()
-                self.get_link_serializer(note_link_obj)
-
-            else:
-                source_obj = Source.objects.filter(
-                    main_url=source['href'], name=source['title']).first()
-                if source_obj:
-                    source_serializer = PreSourceSerializer(source_obj)
-                    pre_link['source_full'] = source_serializer.data
-                else:
-                    pre_link['source_full'] = {
-                        "name": source['title'],
-                        "main_url": source['href'],
-                    }
-                self.built_note_links.append(pre_link)
-
-        # source_serializer = SourceSerializer(new_sources, many=True)
-        all_sources = SourceSerializer(Source.objects.all(), many=True)
         return {
             'search_count': len(self.built_note_links),
             'note_links': self.built_note_links,
-            'feed': links_data.get('feed'),
-            'all_sources': all_sources.data,
+            'feed': self.search_service.feed,
         }
+
+    def _date_to_str(self, entry: dict):
+        from utils.date_time import parse_gmt_date_list
+        published_parsed = entry.get('published_parsed')
+        published_at = parse_gmt_date_list(published_parsed)
+        if published_at:
+            return published_at.strftime('%Y-%m-%d %H:%M:%S')
+        return None
 
 
 class SearchQueryViewSet(SearchMixin, ModelViewSet):
@@ -155,20 +111,34 @@ class SearchQueryViewSet(SearchMixin, ModelViewSet):
 
         return super().get_serializer_class()
 
-    def get_search_query(self) -> SearchQuery:
-        return self.get_object()
+    def add_link_full_data(self, note_link: NoteLink):
+        note_link_data = NoteLinkFullSerializer(note_link).data
+        self.built_note_links.append(note_link_data)
 
-    def get_when_data(self):
-        when_serializer = self.get_serializer(
-            data=self.request.data)  # type: ignore
-
-        when_serializer.is_valid(raise_exception=True)
-        return when_serializer.validated_data
+    def save_note_link(self, source_data: dict, pre_link: dict):
+        href = source_data.get('href')
+        title = source_data.get('title')
+        source_obj = Source.objects.filter(main_url=href, name=title).first()
+        if source_obj:
+            source_serializer = PreSourceSerializer(source_obj)
+            pre_link['source_full'] = source_serializer.data
+        else:
+            pre_link['source_full'] = {"name": title, "main_url": href}
+        self.built_note_links.append(pre_link)
 
     @action(detail=True, methods=['post'])
     def search(self, request, pk=None):
         self.apply_query = None
-        return Response(self.search_data())
+        search_query = self.get_object()
+
+        when_str = request.data.get('when', "")
+        if not when_str:
+            return Response(
+                {"errors": ["Se requiere el campo 'when'"]},
+                status=400
+            )
+        search_query_data = self.search_note_data(search_query, when=when_str)
+        return Response(search_query_data)
 
 
 class ApplyQueryViewSet(SearchMixin, ModelViewSet):
@@ -183,28 +153,84 @@ class ApplyQueryViewSet(SearchMixin, ModelViewSet):
         }
         return actions.get(self.action, self.serializer_class)
 
-    def get_search_query(self) -> SearchQuery:
-        return self.get_object().search_query
+    def add_link_full_data(self, note_link: NoteLink):
+        if self.apply_query:
+            note_link.queries.add(self.apply_query)
 
-    def get_when_data(self):
-        apply_query: ApplyQuery = self.get_object()
-        return {
-            'when': None,
-            'from_date': apply_query.from_date,
-            'to_date': apply_query.to_date,
-        }
+    def save_note_link(self, source_data: dict, pre_link: dict):
+        href = source_data.get('href')
+        title = source_data.get('title')
+        try:
+            source_obj, _ = Source.objects.get_or_create(
+                main_url=href, name=title)
+        except Exception as e:
+            source_obj = Source.objects\
+                .filter(main_url=href, name=title)\
+                .first()
+        pre_link['source'] = source_obj.id
+        note_link_serializer = NoteLinkSerializer(data=pre_link)
+        note_link_serializer.is_valid(raise_exception=True)
+        note_link_obj = note_link_serializer.save()
+        self.add_link_full_data(note_link_obj)
 
     @action(detail=True, methods=['get'])
     def search(self, request, pk=None):
         import traceback
-        self.apply_query = self.get_object()
+        from search.find_origin import FindOrigin
+        from search.ai_clean.pre_classify import PreClassifier
+        apply_query = self.get_object()
+        self.apply_query = apply_query
+
         try:
-            search_query_data = self.search_data()
+            search_query_data = self.search_note_data(
+                apply_query.search_query,
+                from_date=apply_query.from_date,
+                to_date=apply_query.to_date)
+
         except Exception as e:
-            self.apply_query.add_errors(str(e))
+            apply_query.add_errors(str(e))
             print(traceback.format_exc())
             raise ValidationError(str(e))
-            # raise e  # para debug
+
+        all_errors = {}
+        pk_int = int(pk)
+
+        if feed := self.search_service.feed:
+            apply_query.last_feed = feed
+
+        if errors := self.search_service.errors:
+            apply_query.add_errors(errors, save=False)
+            all_errors['search_service'] = errors
+
+        find_origin = FindOrigin()
+        find_origin.find_sources_by_apply_query(apply_query)
+        if find_origin.errors:
+            apply_query.add_errors(find_origin.errors, save=False)
+            all_errors['find_origin'] = find_origin.errors
+
+        pre_classifier = PreClassifier()
+        pre_classifier.pre_classify_notes(apply_query)
+        if pre_classifier.errors:
+            apply_query.add_errors(pre_classifier.errors, save=False)
+            all_errors['pre_classifier'] = pre_classifier.errors
+
+        note_links = NoteLink.objects\
+            .filter(queries=apply_query)\
+            .filter()\
+            .prefetch_related('note_contents')
+
+        search_query_data['note_links'] = NoteLinkFullSerializer(
+            note_links, many=True).data
+
         for entry in search_query_data['note_links']:
-            entry['apply_query'] = pk
+            entry['apply_query'] = pk_int
+
+        all_sources = SourceSerializer(Source.objects.all(), many=True)
+        search_query_data['all_sources'] = all_sources.data
+
+        if all_errors:
+            search_query_data['errors'] = all_errors
+
+        apply_query.save()
+
         return Response(search_query_data)

@@ -24,7 +24,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(
 # -----------------------Default database configuration-----------------------
 POSTRGRESQL_DB = os.getenv('POSTRGRESQL_DB', False)
 DATABASE_NAME = os.getenv("DATABASE_NAME", "db.sqlite3")
-print("DATABASE_NAME:", DATABASE_NAME)
 DATABASE_SCHEMA = os.getenv("DATABASE_SCHEMA")
 if POSTRGRESQL_DB:
     default_database = {

@@ -17,6 +17,12 @@ class SourceSimpleSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class SourceGeminiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Source
+        fields = ["id", "name", "main_url"]
+
+
 class NoteLinkFullSerializer(serializers.ModelSerializer):
     note_contents = BasicNoteContentSerializer(many=True, read_only=True)
     # source = SourceSimpleSerializer(read_only=True)
@@ -48,6 +54,15 @@ class NoteLinkSpecialSerializer(serializers.ModelSerializer):
         # read_only_fields = ["gnews_url", "source", "title"]
         # exclude = ["gnews_url", "title"]
         fields = "__all__"
+
+
+class NoteLinkGeminiSerializer(serializers.ModelSerializer):
+    source_name = serializers.CharField(source='source.name', read_only=True)
+    source_url = serializers.CharField(source='source.main_url', read_only=True)
+
+    class Meta:
+        model = NoteLink
+        fields = ["id", "title", "source_name", "source_url"]
 
 
 class SourceMethodSerializer(serializers.ModelSerializer):

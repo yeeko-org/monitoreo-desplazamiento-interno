@@ -28,6 +28,7 @@ class RequestGemini:
         self.system_msg = None
         self.response = None
         self.cache = None
+        self.errors = []
 
     def build_chat(self, prompt_path: str):
         with open(prompt_path, "r", encoding="utf-8") as file:
@@ -41,16 +42,23 @@ class RequestGemini:
         #     new_prompt = f"{role}{new_prompt}"
         #     self.base_messages.append(new_prompt)
 
-    def create_cache(self, name:str = 'criteria_v1_single'):
+    def create_cache(
+            self, name:str = 'criteria_v1_single', seconds:int = 300
+    ):
         model = f"models/{self.engine}"
-        self.cache = self.client.caches.create(
-            model=self.engine,
-            config=types.CreateCachedContentConfig(
-                display_name=name,
-                system_instruction=self.system_msg,
-                ttl="300s",
+        try:
+            self.cache = self.client.caches.create(
+                model=model,
+                config=types.CreateCachedContentConfig(
+                    display_name=name,
+                    system_instruction=self.system_msg,
+                    # ttl="300s",
+                    ttl=f"{seconds}s",
+                )
             )
-        )
+        except Exception as e:
+            print(f"Error creating cache: {e}")
+            self.cache = None
 
     def format_prompt(self, prompt):
         if not prompt:
@@ -69,22 +77,32 @@ class RequestGemini:
     ):
         new_prompt = self.format_prompt(new_prompt)
 
-        new_prompt = self.format_prompt(new_prompt)
         cache_name = self.cache.name if self.cache else None
+        if cache_name:
+            system_instruction = None
+        else:
+            system_instruction = self.system_msg
+
         config = types.GenerateContentConfig(
             thinking_config=types.ThinkingConfig(thinking_budget=0),
-            system_instruction=self.system_msg,
+            system_instruction=system_instruction,
             response_schema=schema_clss,
             response_mime_type="application/json",
             cached_content=cache_name,
         )
         # content = f"{content}\nsections: {new_prompt}\nJSON:"
         content = f"{main_name}: {new_prompt}"
-        response = self.client.models.generate_content(
-            model=self.engine,
-            contents=content,
-            config=config,
-        )
+        try:
+            response = self.client.models.generate_content(
+                model=self.engine,
+                contents=content,
+                config=config,
+            )
+        except Exception as e:
+            error = f"Error calling Gemini API: {e}"
+            print(error)
+            self.errors.append(error)
+            return None
         self.response = response
         if not self.first_response:
             self.first_response = response
